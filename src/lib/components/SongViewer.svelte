@@ -3,7 +3,7 @@
 	import { preventChordOverlap } from '#lib/client/chord-layout.js';
 	import { chorusMode, initChorusMode, setChorusMode } from '#lib/client/chorus-preference.js';
 	import { locale, t } from '#lib/client/i18n.js';
-	import { renderSongPreview, type Notation } from '#lib/client/song-preview.js';
+	import { renderSongPreview, type Notation, type PreviewPart } from '#lib/client/song-preview.js';
 	import SongLine from './SongLine.svelte';
 
 	let { content } = $props<{ content: string }>();
@@ -28,6 +28,25 @@
 	);
 	let hasKey = $derived(preview?.hasKey ?? false);
 </script>
+
+{#snippet renderPart(part: PreviewPart)}
+	{#if part.kind === 'line'}
+		<SongLine line={part} />
+	{:else}
+		<div class="bis-group">
+			<div class="bis-content">
+				{#each part.parts as child, childIndex (childIndex)}
+					{@render renderPart(child)}
+				{/each}
+			</div>
+			<div class="bis-bracket" aria-hidden="true"></div>
+			<div class="bis-annotation">
+				<span class="bis-marker">{part.marker}</span>
+				{#if part.label !== null}<span class="bis-label">{part.label}</span>{/if}
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
 <div class="toolbar">
 	<label>
@@ -75,22 +94,7 @@
 						class:recalled={block.recalled}
 					>
 						{#each block.parts as part, partIndex (partIndex)}
-							{#if part.kind === 'line'}
-								<SongLine line={part} />
-							{:else if part.kind === 'bis'}
-								<div class="bis-group">
-									<div class="bis-content">
-										{#each part.lines as line, lineIndex (lineIndex)}
-											<SongLine {line} />
-										{/each}
-									</div>
-									<div class="bis-bracket" aria-hidden="true"></div>
-									<div class="bis-annotation">
-										<span class="bis-marker">{part.marker}</span>
-										{#if part.label !== null}<span class="bis-label">{part.label}</span>{/if}
-									</div>
-								</div>
-							{/if}
+							{@render renderPart(part)}
 						{/each}
 					</div>
 				{:else if block.kind === 'chorus-label'}

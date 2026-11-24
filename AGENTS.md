@@ -30,7 +30,7 @@ UI → client state → application services → core / infrastructure. Do not p
 5. Store original ChordPro in `Song.content` and the searchable title separately. Transposition and notation changes are view-only.
 6. SQLite is the only supported database for this version. Do not claim provider portability from `DATABASE_URL` alone.
 7. `{chorus}` references are presentation only. By default show a localized label; expanded mode copies the targeted chorus into the view without changing saved ChordPro. Unlabelled references use the nearest preceding chorus; named references match the chorus label.
-8. `x_start_of_bis` and `x_end_of_bis` are custom presentation directives. They can appear inside verses or choruses; all other `x_` directives are ignored. Preserve their content when expanding a chorus. Escape the optional label in Svelte and keep marker text and styles configurable in code.
+8. `x_start_of_bis` and `x_end_of_bis` are custom presentation directives. They can appear inside verses or choruses and nest up to two levels; the outer bracket must enclose and sit to the right of the inner one. All other `x_` directives are ignored. Preserve their content when expanding a chorus. Escape the optional label in Svelte and keep marker text and styles configurable in code.
 
 ## Workflow
 

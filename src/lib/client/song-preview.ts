@@ -27,7 +27,7 @@ export const defaultBisDisplayConfig: BisDisplayConfig = {
 
 export interface PreviewBis {
 	kind: 'bis';
-	lines: PreviewLine[];
+	parts: PreviewPart[];
 	repeat: number | null;
 	label: string | null;
 	marker: string;
@@ -78,10 +78,10 @@ function collectBlocks(
 ): SourceBlock[] {
 	const blocks: SourceBlock[] = [];
 	let current: SectionBlock | null = null;
-	let activeBis: PreviewBis | null = null;
+	const bisStack: PreviewBis[] = [];
 
 	function flush() {
-		if (activeBis) throw new Error('Missing {x_end_of_bis} directive.');
+		if (bisStack.length > 0) throw new Error('Missing {x_end_of_bis} directive.');
 		if (current && (current.parts.length > 0 || current.section === 'chorus')) blocks.push(current);
 		current = null;
 	}
@@ -106,7 +106,9 @@ function collectBlocks(
 				continue;
 			}
 			if (directive.name === 'x_start_of_bis') {
-				if (activeBis) throw new Error('Nested {x_start_of_bis} directives are not supported.');
+				if (bisStack.length >= 2) {
+					throw new Error('{x_start_of_bis} supports at most two nested levels.');
+				}
 				if (!current) {
 					current = {
 						kind: 'section',
@@ -125,9 +127,9 @@ function collectBlocks(
 						throw new Error('The repeat attribute of {x_start_of_bis} must be a positive integer.');
 					}
 				}
-				activeBis = {
+				const bis: PreviewBis = {
 					kind: 'bis',
-					lines: [],
+					parts: [],
 					repeat,
 					label: directive.attributes.label ?? null,
 					marker:
@@ -135,12 +137,15 @@ function collectBlocks(
 							? bisDisplay.defaultMarker
 							: bisDisplay.repeatMarkerTemplate.replaceAll('{count}', String(repeat))
 				};
-				current.parts.push(activeBis);
+				const parent = bisStack.at(-1);
+				if (parent) parent.parts.push(bis);
+				else current.parts.push(bis);
+				bisStack.push(bis);
 				continue;
 			}
 			if (directive.name === 'x_end_of_bis') {
-				if (!activeBis) throw new Error('Unexpected {x_end_of_bis} directive.');
-				activeBis = null;
+				if (bisStack.length === 0) throw new Error('Unexpected {x_end_of_bis} directive.');
+				bisStack.pop();
 				continue;
 			}
 			if (directive.name.startsWith('x_')) continue;
@@ -154,14 +159,14 @@ function collectBlocks(
 				continue;
 			}
 			if (directive.isComment()) {
-				if (activeBis || current) {
+				if (bisStack.length > 0 || current) {
 					const comment: PreviewLine = {
 						kind: 'line',
 						segments: [{ chord: '', lyrics: directive.value }],
 						hasChords: false,
 						comment: true
 					};
-					if (activeBis) activeBis.lines.push(comment);
+					if (bisStack.length > 0) bisStack.at(-1)!.parts.push(comment);
 					else current?.parts.push(comment);
 				} else {
 					blocks.push({ kind: 'comment', text: directive.value });
@@ -184,7 +189,7 @@ function collectBlocks(
 				segments: [{ chord: '', lyrics: '' }],
 				hasChords: false
 			};
-			if (activeBis) activeBis.lines.push(blank);
+			if (bisStack.length > 0) bisStack.at(-1)!.parts.push(blank);
 			else if (current?.section === 'plain') flush();
 			else current?.parts.push(blank);
 			continue;
@@ -204,7 +209,7 @@ function collectBlocks(
 			segments,
 			hasChords: segments.some((segment) => Boolean(segment.chord))
 		};
-		if (activeBis) activeBis.lines.push(previewLine);
+		if (bisStack.length > 0) bisStack.at(-1)!.parts.push(previewLine);
 		else current.parts.push(previewLine);
 	}
 	flush();

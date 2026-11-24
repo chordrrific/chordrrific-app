@@ -39,7 +39,7 @@ The custom `x_` directives below mark a passage to repeat. Both attributes are o
 {x_end_of_bis}
 ```
 
-The viewer draws a rounded bracket to the right. Without `repeat`, it shows `(bis)`; with a positive integer, it shows `(x2)`, `(x3)` and so on. `label` appears beneath the repeat marker as escaped text. Marker wording is defined by `BisDisplayConfig` in `src/lib/client/song-preview.ts`; the bracket and text styles use `--bis-*` CSS variables in `src/routes/layout.css` for future customization. Other `x_` directives are ignored.
+The viewer draws a rounded bracket to the right. Without `repeat`, it shows `(bis)`; with a positive integer, it shows `(x2)`, `(x3)` and so on. `label` appears beneath the repeat marker as escaped text. Bis blocks may be nested once (two levels total); the outer bracket encloses the inner block and appears farther right. A third level is reported as a preview error. Marker wording is defined by `BisDisplayConfig` in `src/lib/client/song-preview.ts`; the bracket and text styles use `--bis-*` CSS variables in `src/routes/layout.css` for future customization. Other `x_` directives are ignored.
 
 A song may belong to several collections. Every collection has its own song order. Songs and their tags and collections are private to their owner.
 

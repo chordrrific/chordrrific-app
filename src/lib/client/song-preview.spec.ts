@@ -5,6 +5,7 @@ import {
 	type PreviewBis,
 	type PreviewBlock,
 	type PreviewLine,
+	type PreviewPart,
 	type SongPreview
 } from './song-preview.js';
 
@@ -14,8 +15,12 @@ function sections(preview: SongPreview): Section[] {
 	return preview.blocks.filter((block): block is Section => block.kind === 'section');
 }
 
+function partLines(parts: PreviewPart[]): PreviewLine[] {
+	return parts.flatMap((part) => (part.kind === 'line' ? [part] : partLines(part.parts)));
+}
+
 function lines(section: Section): PreviewLine[] {
-	return section.parts.flatMap((part) => (part.kind === 'line' ? [part] : part.lines));
+	return partLines(section.parts);
 }
 
 function lyrics(section: Section): string {
@@ -185,6 +190,50 @@ describe('song preview', () => {
 		expect(bis(repeated)[0].marker).toBe('(x2)');
 		expect(bis(repeated)[0].label).toBe('Tenores');
 		expect(chords(repeated)).toEqual(['Do', 'Re']);
+	});
+
+	it('nests one bis inside another and keeps the outer span around it', () => {
+		const content =
+			'{start_of_verse}\n[A]Antes\n' +
+			'{x_start_of_bis repeat="2" label="Todos"}\n[B]Exterior\n' +
+			'{x_start_of_bis repeat="3" label="Tenores"}\n[C]Interior\n{x_end_of_bis}\n' +
+			'[D]Exterior otra\n{x_end_of_bis}\n[E]Después\n{end_of_verse}';
+		const preview = renderSongPreview(library, content, 'symbol', 0);
+		const verse = sections(preview)[0];
+		const outer = bis(verse)[0];
+		const inner = outer.parts[1];
+		expect(preview.error).toBeNull();
+		expect(verse.parts.map((part) => part.kind)).toEqual(['line', 'bis', 'line']);
+		expect(outer.parts.map((part) => part.kind)).toEqual(['line', 'bis', 'line']);
+		expect(outer.marker).toBe('(x2)');
+		expect(outer.label).toBe('Todos');
+		expect(inner.kind).toBe('bis');
+		if (inner.kind !== 'bis') throw new Error('Expected inner bis');
+		expect(inner.marker).toBe('(x3)');
+		expect(inner.label).toBe('Tenores');
+		expect(lyrics(verse)).toBe('Antes\nExterior\nInterior\nExterior otra\nDespués');
+	});
+
+	it('preserves nested bis blocks in an expanded chorus', () => {
+		const content =
+			'{start_of_chorus}\n{x_start_of_bis}\n[A]Outer\n' +
+			'{x_start_of_bis}\n[B]Inner\n{x_end_of_bis}\n{x_end_of_bis}\n' +
+			'{end_of_chorus}\n\n{chorus}';
+		const preview = renderSongPreview(library, content, 'symbol', 0, 'expanded');
+		const repeated = sections(preview).at(-1)!;
+		const outer = bis(repeated)[0];
+		expect(repeated.recalled).toBe(true);
+		expect(outer.parts[1].kind).toBe('bis');
+		expect(lyrics(repeated)).toBe('Outer\nInner');
+	});
+
+	it('reports a third bis level as a preview error', () => {
+		const content =
+			'{x_start_of_bis}\n{x_start_of_bis}\n{x_start_of_bis}\n[A]Too deep\n' +
+			'{x_end_of_bis}\n{x_end_of_bis}\n{x_end_of_bis}';
+		const preview = renderSongPreview(library, content, 'symbol', 0);
+		expect(preview.error).toContain('at most two nested levels');
+		expect(preview.blocks).toEqual([]);
 	});
 
 	it('reports invalid or unbalanced bis directives without crashing the preview', () => {

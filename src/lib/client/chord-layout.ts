@@ -38,7 +38,7 @@ export const preventChordOverlap: Action<HTMLDivElement> = (node) => {
 			});
 		}
 
-		for (const content of bisContents) {
+		for (const content of [...bisContents].reverse()) {
 			const contentRight = content.getBoundingClientRect().right;
 			const chordRights = [...content.querySelectorAll<HTMLElement>('.column > .chord')]
 				.filter((label) => label.textContent?.trim())
