@@ -1,33 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { renderSongPreview, type Notation } from '#lib/client/song-preview.js';
 
 	let { content } = $props<{ content: string }>();
-	let notation = $state<'symbol' | 'solfege' | 'number'>('symbol');
+	let notation = $state<Notation>('symbol');
 	let semitones = $state(0);
-	let ready = $state(false);
 	let library = $state.raw<typeof import('chordsheetjs') | null>(null);
 	let purifier = $state.raw<typeof import('dompurify').default | null>(null);
+	let loadError = $state<string | null>(null);
 
-	onMount(async () => {
-		library = await import('chordsheetjs');
-		purifier = (await import('dompurify')).default;
-		ready = true;
+	onMount(() => {
+		void Promise.all([import('chordsheetjs'), import('dompurify')])
+			.then(([chordSheet, domPurify]) => {
+				library = chordSheet;
+				purifier = domPurify.default;
+			})
+			.catch((cause: unknown) => {
+				loadError = cause instanceof Error ? cause.message : String(cause);
+			});
 	});
 
-	let hasKey = $derived(
-		ready && library ? Boolean(new library.ChordProParser().parse(content).key) : false
-	);
-	let markup = $derived.by(() => {
-		if (!ready || !library || !purifier) return '';
-		try {
-			const song = new library.ChordProParser().parse(content).transpose(semitones);
-			song.metadata.set('chord_style', notation === 'number' && !song.key ? 'symbol' : notation);
-			return purifier.sanitize(new library.HtmlTableFormatter().format(song));
-		} catch {
-			return '';
-		}
-	});
+	let preview = $derived(library ? renderSongPreview(library, content, notation, semitones) : null);
+	let hasKey = $derived(preview?.hasKey ?? false);
 </script>
 
 <div class="toolbar">
@@ -48,8 +43,14 @@
 		</select>
 	</label>
 </div>
-{#if !hasKey}<p class="muted">{t($locale, 'keyNeeded')}</p>{/if}
+{#if preview && !preview.error && !hasKey}<p class="muted">{t($locale, 'keyNeeded')}</p>{/if}
 <div class="viewer" aria-label={t($locale, 'preview')}>
-	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-	{#if ready}{@html markup}{:else}<p>{t($locale, 'loading')}</p>{/if}
+	{#if loadError}<p class="error" role="alert">{t($locale, 'previewError')}: {loadError}</p>
+	{:else if preview?.error}<p class="error" role="alert">
+			{t($locale, 'previewError')}: {preview.error}
+		</p>
+	{:else if preview && purifier}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+		{@html purifier.sanitize(preview.markup)}
+	{:else}<p>{t($locale, 'loading')}</p>{/if}
 </div>
