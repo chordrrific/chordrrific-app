@@ -1,72 +1,44 @@
-# AGENTS.md – Guía para agentes y desarrolladores
+# AGENTS.md — Chordrrific
 
-## Visión
-Chordrrific es la base open‑source que probaremos antes de lanzar MySweetChord (SaaS multi‑tenant). Su arquitectura está separada en capas para que el dominio musical pueda reutilizarse sin depender de UI ni de infraestructura.
+Chordrrific is the public, open-source ChordPro songbook app. MySweetChord is a future private project in a separate repository. Keep the music domain reusable and free of framework and storage dependencies.
 
-## Stack tecnológico
-- **Frontend**: SvelteKit + TypeScript (strict) + TailwindCSS
-- **Backend**: API SvelteKit + Prisma (SQLite por defecto, migrable a Postgres)
-- **Auth**: Lucia Auth (argon2)
-- **Parsing**: ChordSheetJS (solo en cliente)
+## Stack and layout
 
-## Arquitectura por capas
+- SvelteKit + TypeScript strict + Tailwind CSS; Node adapter.
+- Prisma + SQLite only. `DATABASE_URL` is a SQLite `file:` URL; PostgreSQL is a future migration, not an environment-only switch.
+- Passwords: argon2. Sessions: application code based on Lucia's current guides; do not add the deprecated Lucia package.
+- ChordSheetJS runs in the browser only. Sanitize formatted HTML before rendering.
+- Vitest for unit and SQLite integration tests.
+
 ```
-UI (Svelte) → App/State (stores) → Domain (src/lib/core) → Infra (src/lib/db, src/lib/auth)
-```
-
-## Convenciones de código
-- TS strict, no `any`
-- ESLint + Prettier (Husky + lint‑staged)
-- Commits con Conventional Commits → SemVer
-- **Los commits siempre se hacen en ramas `feature/*`.** El flujo típico es:
-  1. Crear una rama de feature (`git checkout -b feature/<nombre>`).
-  2. Realizar cambios y comitearlos.
-  3. Abrir un Pull Request contra la rama `develop`.
-  4. Después de revisión, mergear a `develop`.
-- Feature branches `feature/<nombre>` → PR → `develop` → `main` (release).
-
-## Estructura de directorios
-```
-src/
-├─ lib/
-│  ├─ core/        # dominio puro
-│  ├─ db/          # Prisma client + repositorios
-│  └─ auth/        # Lucia y helpers
-├─ routes/
-│  ├─ +page.svelte # página mínima
-│  └─ api/
-│     ├─ auth/
-│     ├─ users/
-│     └─ songs/
-└─ routes/ui/       # UI futura (listado, editor, visor)
-prisma/
-  schema.prisma
-  seed.ts
-Dockerfile
-README.md
-AGENTS.md
+src/lib/core/          pure domain logic
+src/lib/server/        Prisma, sessions, application services
+src/lib/client/        UI state, translations and API client
+src/lib/components/    small UI components
+src/routes/api/        thin SvelteKit API endpoints
+prisma/                schema, migration history and manual seed
 ```
 
-## Reglas Svelte
-- Mantener lógica fuera de componentes.
-- Usar `bind:`/`on:`/stores para reactividad.
-- Componentes pequeños y composables.
+UI → client state → application services → core / infrastructure. Do not put business rules in Svelte components. Do not import Svelte, Prisma or authentication code into `src/lib/core`.
 
-## Base de datos
-- SQLite por defecto (`DATABASE_URL=file:./data/chordrrific.db`).
-- Cambiar a PostgreSQL editando `.env`.
+## Invariants
 
-## Tests
-- Unitarios en `src/lib/core/*` (Vitest).
-- API integration en `tests/integration/*`.
+1. The manual seed creates an administrator only if no `isAdmin` user exists. It reads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the environment and has no default password.
+2. Never delete or demote the last administrator.
+3. Every song, collection and tag belongs to one user. Always verify ownership in server services, including relationship updates. Deleting a user cascades to all their data and sessions.
+4. A song may be in several collections; ordering belongs to the collection membership, not the song.
+5. Store original ChordPro in `Song.content` and the searchable title separately. Transposition and notation changes are view-only.
+6. SQLite is the only supported database for this version. Do not claim provider portability from `DATABASE_URL` alone.
 
-## Git
-- `main` solo recibe merges vía PR desde `develop`.
-- Hooks: Husky + lint‑staged + commitlint.
-- Tags automáticos con release‑please (opcional).
+## Workflow
 
-## Principios que NO deben romperse
-1. **Idempotencia del seed** – nunca crear otro admin si ya existe uno.
-2. **Separación de dominio** – `src/lib/core/*` sin Prisma, Lucia ni Svelte.
-3. **No lógica de negocio en componentes** – usar servicios o core.
-4. **DB desacoplada** – cambiar a Postgres solo editando `DATABASE_URL`.
+- Use strict TypeScript; no `any`.
+- Run `npm run check`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` for relevant changes.
+- Use Prettier and ESLint; Husky runs lint-staged and commitlint.
+- Commit only on `feature/*` branches with Conventional Commits. Open PRs to `develop`; release to `main` through a PR. Do not commit directly to `develop` or `main`.
+- The current feature branch was initially committed under an older identity. The user has authorized using the current identity for local commits and will revise author metadata before publication.
+- Do not run the seed automatically from `postinstall` or app startup. Apply migrations first, then run `npm run db:seed` manually.
+
+## Testing and local development
+
+Run directly with Node locally (`npm run dev`). Podman is available for container smoke tests; the container is for deployment, not a local development requirement. Keep SQLite files in `data/` and out of Git.

@@ -1,42 +1,70 @@
-# sv
+# Chordrrific
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Open-source songbook manager for ChordPro. Each account has a private library of songs, ordered collections and tags. The interface is available in Spanish and English.
 
-## Creating a project
+## Requirements
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Node.js 24 and npm
+- SQLite (managed through Prisma; no separate server required)
 
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+## Run locally
 
 ```sh
-# recreate this project
-npx sv@0.17.0 create --template demo --types ts --add tailwindcss="plugins:none" eslint vitest="usages:unit" sveltekit-adapter="adapter:node" --no-download-check --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm ci
+cp .env.example .env
+# Set ADMIN_EMAIL and ADMIN_PASSWORD in .env before the first seed.
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+Open the URL printed by Vite. The seed creates an administrator only when no administrator exists; rerunning it does not reset credentials. Passwords must contain at least 12 characters. The SQLite file defaults to `data/chordrrific.db` and is ignored by Git. `DATABASE_URL` must be a SQLite `file:` URL.
 
-To create a production version of your app:
+For a production build, run `npm run build` and then `node build`. Set `ORIGIN` to the public URL when serving plain HTTP or using a reverse proxy (for example, `ORIGIN=http://localhost:3000 node build` for a local preview). Apply migrations with `npm run db:deploy` before starting a new version. The seed is always a separate manual step.
+
+## Using the app
+
+An administrator creates accounts, can grant administrator access and can reset passwords. The last administrator cannot be deleted or demoted. Users can change their own passwords. Deleting an account deletes its songs, collections, tags and sessions.
+
+Songs store a separate searchable title and the original ChordPro text. The editor accepts plain text; the viewer uses ChordSheetJS in the browser. Add a `{key: C}` directive to enable Nashville notation. Transposition and notation changes affect only the view, not the saved text.
+
+A song may belong to several collections. Every collection has its own song order. Songs and their tags and collections are private to their owner.
+
+## Quality checks
 
 ```sh
+npm run check
+npm run lint
+npm run format:check
+npm test
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+`npm test` runs domain unit tests and SQLite integration tests in a temporary database. GitHub Actions runs the same checks on feature branches and pull requests.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+To check a running app over HTTP, set `SMOKE_BASE_URL`, `SMOKE_EMAIL` and `SMOKE_PASSWORD`, then run `node scripts/smoke-api.mjs`. Use an administrator account; the script creates and removes temporary records.
+
+## Container deployment
+
+A `Dockerfile` is provided for deployment and can be built with Podman. Local development uses `npm run dev` directly. Persist `/app/data` as a volume; run `npm run db:deploy` and, on first setup only, `npm run db:seed` in the container before serving traffic. Supply `ADMIN_EMAIL` and `ADMIN_PASSWORD` only to the seed process. Set `ORIGIN` to the public URL when starting the app container. The container listens on port 3000.
+
+For a local Podman check, after setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your shell:
+
+```sh
+podman build -t chordrrific:local .
+podman volume create chordrrific-data
+podman run --rm -v chordrrific-data:/app/data:Z chordrrific:local npm run db:deploy
+podman run --rm -v chordrrific-data:/app/data:Z -e ADMIN_EMAIL -e ADMIN_PASSWORD chordrrific:local npm run db:seed
+podman run --rm -p 3000:3000 -v chordrrific-data:/app/data:Z -e ORIGIN=http://localhost:3000 chordrrific:local
+```
+
+Open `http://localhost:3000`. Use the same volume for each command so migrations, the administrator and application data share one SQLite database.
+
+## Architecture
+
+`src/lib/core` contains pure domain validation without Svelte, Prisma or authentication dependencies. `src/lib/server` contains SQLite access, sessions and application services. SvelteKit API routes expose these services. The UI uses the API, and ChordSheetJS is loaded only in the browser. MySweetChord is a future separate private repository; this repository has no tenant model.
+
+## Contributing
+
+Work on a `feature/*` branch, use Conventional Commits and open a pull request to `develop`. Releases reach `main` through pull requests. The project is licensed under ISC; see [LICENSE](LICENSE).
