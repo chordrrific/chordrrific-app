@@ -242,12 +242,27 @@ button.danger {
 .viewer .paragraph {
 	margin: 0 0 1rem;
 }
-.viewer table {
-	border-collapse: collapse;
+.viewer .row {
+	padding-top: 1.2em;
+	white-space: nowrap;
+	line-height: 1.4;
 }
-.viewer td {
-	padding: 0 0.2rem;
-	vertical-align: bottom;
+.viewer .column {
+	position: relative;
+	display: inline-block;
+	vertical-align: top;
+}
+.viewer .column .chord {
+	position: absolute;
+	bottom: 100%;
+	left: 0;
+	white-space: nowrap;
+	line-height: 1.2;
+}
+.viewer .column .lyrics {
+	min-height: 1.4em;
+	white-space: pre;
+	line-height: 1.4;
 }
 @media (max-width: 800px) {
 	.site-header {

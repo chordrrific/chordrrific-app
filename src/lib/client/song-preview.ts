@@ -36,7 +36,7 @@ export function renderSongPreview(
 		}
 
 		song.metadata.set('chord_style', notation);
-		return { markup: new library.HtmlTableFormatter().format(song), hasKey, error: null };
+		return { markup: new library.HtmlDivFormatter().format(song), hasKey, error: null };
 	} catch (cause) {
 		return {
 			markup: '',
