@@ -3,6 +3,11 @@
 	import { request } from '#lib/client/api.js';
 	import { filterSongs, changedMembershipIds } from '#lib/client/catalog.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import {
+		chordProFileAccept,
+		importChordProFiles,
+		type SongImportResult
+	} from '#lib/client/song-import.js';
 	import type { Collection, Song, Tag } from '#lib/client/types.js';
 	import SongViewer from '#lib/components/SongViewer.svelte';
 
@@ -20,8 +25,15 @@
 	let chosenCollections = $state<string[]>([]);
 	let message = $state('');
 	let busy = $state(false);
+	let importing = $state(false);
+	let importResults = $state<SongImportResult[]>([]);
+	let fileInput: HTMLInputElement;
 	let selected = $derived(songs.find((song) => song.id === selectedId));
 	let visibleSongs = $derived(filterSongs(songs, search, tagFilter, collectionFilter));
+	let importedCount = $derived(
+		importResults.filter((result) => result.status === 'imported').length
+	);
+	let failedCount = $derived(importResults.length - importedCount);
 
 	async function loadCatalog() {
 		try {
@@ -58,6 +70,22 @@
 	}
 	function toggle(id: string, list: string[]): string[] {
 		return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+	}
+	async function importSelected(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const files = Array.from(input.files ?? []);
+		input.value = '';
+		if (files.length === 0) return;
+		importing = true;
+		importResults = [];
+		try {
+			importResults = await importChordProFiles(files, (song) =>
+				request<Song>('/api/songs', 'POST', song)
+			);
+			if (importResults.some((result) => result.status === 'imported')) await loadCatalog();
+		} finally {
+			importing = false;
+		}
 	}
 	async function saveSong(event: SubmitEvent) {
 		event.preventDefault();
@@ -135,7 +163,40 @@
 		</select>
 	</label>
 	<button class="primary" onclick={newSong}>{t($locale, 'newSong')}</button>
+	<button disabled={importing} onclick={() => fileInput.click()}>
+		{t($locale, importing ? 'importingSongs' : 'importSongs')}
+	</button>
+	<input
+		bind:this={fileInput}
+		type="file"
+		accept={chordProFileAccept}
+		multiple
+		hidden
+		aria-label={t($locale, 'importSongs')}
+		onchange={importSelected}
+	/>
 </div>
+{#if importResults.length}
+	<section class="card import-results" aria-live="polite">
+		<h2>{t($locale, 'importSummary')}</h2>
+		<p>
+			{t($locale, 'importedCount')}: {importedCount} · {t($locale, 'failedCount')}: {failedCount}
+		</p>
+		<ul>
+			{#each importResults as result, index (index)}
+				<li>
+					{#if result.status === 'imported'}
+						<span class="success">{t($locale, 'importedItem')}</span>
+						<strong>{result.fileName}</strong> → {result.title}
+					{:else}
+						<span class="error">{t($locale, 'failedItem')}</span>
+						<strong>{result.fileName}</strong>: {result.error}
+					{/if}
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 <div class="grid-two">
 	<section class="card">
 		<h1>{t($locale, 'songs')}</h1>

@@ -29,6 +29,8 @@ An administrator creates accounts, can grant administrator access and can reset 
 
 Songs store a separate searchable title and the original ChordPro text. The editor accepts plain text; the viewer parses it with ChordSheetJS in the browser and renders it with Svelte. Add a `{key: C}` directive to enable Nashville notation. Transposition and notation changes affect only the view, not the saved text.
 
+Use **Importar canción/es** to choose one or more ChordPro files (`.cho`, `.crd`, `.chopro`, `.chord`, `.chordpro`, `.pro` or `.txt`). Each file creates a separate song. Its `{title}` (or `{t}`) becomes the song title; when absent, the filename without its extension is used. The app shows imported and failed files individually. Importing reads the original files without changing them.
+
 By default, a `{chorus}` reference appears as "Estribillo" ("Chorus" in English). The viewer can instead expand the referenced chorus; this preference is saved in the browser. An unlabelled reference uses the nearest preceding chorus. A named reference such as `{chorus: Chorus 2}` uses the chorus named by `{start_of_chorus: Chorus 2}`. Repeated lyrics are generated only for display and are never written back to the song.
 
 The custom `x_` directives below mark a passage to repeat. Both attributes are optional:
