@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { preventChordOverlap } from '#lib/client/chord-layout.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { renderSongPreview, type Notation } from '#lib/client/song-preview.js';
 
@@ -44,7 +45,7 @@
 	</label>
 </div>
 {#if preview && !preview.error && !hasKey}<p class="muted">{t($locale, 'keyNeeded')}</p>{/if}
-<div class="viewer" aria-label={t($locale, 'preview')}>
+<div class="viewer" aria-label={t($locale, 'preview')} use:preventChordOverlap>
 	{#if loadError}<p class="error" role="alert">{t($locale, 'previewError')}: {loadError}</p>
 	{:else if preview?.error}<p class="error" role="alert">
 			{t($locale, 'previewError')}: {preview.error}
