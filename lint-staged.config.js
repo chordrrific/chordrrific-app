@@ -1,1 +1,1 @@
-module.exports = { '*.{js,ts,svelte}': ['eslint --fix', 'prettier --write'] };
+export default { '*.{js,ts,svelte}': ['eslint --fix', 'prettier --write'] };

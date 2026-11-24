@@ -1,56 +1,35 @@
 <script lang="ts">
-	import Header from './Header.svelte';
+	import { onMount } from 'svelte';
+	import { goto, refreshAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { locale, initLocale, setLocale, t } from '#lib/client/i18n.js';
+	import { request } from '#lib/client/api.js';
 	import './layout.css';
 
-	let { children } = $props();
+	let { data, children } = $props();
+	onMount(initLocale);
+	async function signOut() {
+		await request('/api/auth/logout', 'POST');
+		await refreshAll();
+		await goto(resolve('/login'));
+	}
 </script>
 
-<div class="app">
-	<Header />
-	<main>{@render children()}</main>
-
-	<footer>
-		<p>
-			visit 
-			<a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a>
-			to learn about SvelteKit
-		</p>
-	</footer>
-</div>
-
-<style>
-	.app {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-	}
-
-	main {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		padding: 1rem;
-		width: 100%;
-		max-width: 64rem;
-		margin: 0 auto;
-		box-sizing: border-box;
-	}
-
-	footer {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		padding: 12px;
-	}
-
-	footer a {
-		font-weight: bold;
-	}
-
-	@media (min-width: 480px) {
-		footer {
-			padding: 12px 0;
-		}
-	}
-</style>
+<header class="site-header">
+	<a class="brand" href={resolve(data.user ? '/app' : '/login')}>♫ {t($locale, 'brand')}</a>
+	<nav aria-label="Main navigation">
+		{#if data.user}
+			<a href={resolve('/app')}>{t($locale, 'songs')}</a>
+			<a href={resolve('/app/collections')}>{t($locale, 'collections')}</a>
+			<a href={resolve('/app/tags')}>{t($locale, 'tags')}</a>
+			{#if data.user.isAdmin}<a href={resolve('/app/admin')}>{t($locale, 'admin')}</a>{/if}
+			<a href={resolve('/app/settings')}>{t($locale, 'settings')}</a>
+			<button class="nav-button" onclick={signOut}>{t($locale, 'signOut')}</button>
+		{/if}
+	</nav>
+	<div class="language-switch" aria-label="Language">
+		<button class:active={$locale === 'es'} onclick={() => setLocale('es')}>ES</button>
+		<button class:active={$locale === 'en'} onclick={() => setLocale('en')}>EN</button>
+	</div>
+</header>
+<main>{@render children()}</main>

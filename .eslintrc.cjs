@@ -1,1 +1,0 @@
-module.exports = { parser: '@typescript-eslint/parser', parserOptions: { ecmaVersion: 2022, sourceType: 'module' }, plugins: ['@typescript-eslint', 'svelte'], extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:svelte/recommended', 'prettier'], rules: {} };
