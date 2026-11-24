@@ -9,17 +9,38 @@ export interface PreviewSegment {
 }
 
 export interface PreviewLine {
+	kind: 'line';
 	segments: PreviewSegment[];
 	hasChords: boolean;
 	comment?: boolean;
 }
+
+export interface BisDisplayConfig {
+	defaultMarker: string;
+	repeatMarkerTemplate: string;
+}
+
+export const defaultBisDisplayConfig: BisDisplayConfig = {
+	defaultMarker: '(bis)',
+	repeatMarkerTemplate: '(x{count})'
+};
+
+export interface PreviewBis {
+	kind: 'bis';
+	lines: PreviewLine[];
+	repeat: number | null;
+	label: string | null;
+	marker: string;
+}
+
+export type PreviewPart = PreviewLine | PreviewBis;
 
 type SectionKind = 'plain' | 'verse' | 'chorus';
 
 interface SectionBlock {
 	kind: 'section';
 	section: SectionKind;
-	lines: PreviewLine[];
+	parts: PreviewPart[];
 	label: string | null;
 	sourceIndex: number;
 	recalled: boolean;
@@ -52,13 +73,16 @@ export interface SongPreview {
 
 function collectBlocks(
 	library: ChordSheetLibrary,
-	song: import('chordsheetjs').Song
+	song: import('chordsheetjs').Song,
+	bisDisplay: BisDisplayConfig
 ): SourceBlock[] {
 	const blocks: SourceBlock[] = [];
 	let current: SectionBlock | null = null;
+	let activeBis: PreviewBis | null = null;
 
 	function flush() {
-		if (current && (current.lines.length > 0 || current.section === 'chorus')) blocks.push(current);
+		if (activeBis) throw new Error('Missing {x_end_of_bis} directive.');
+		if (current && (current.parts.length > 0 || current.section === 'chorus')) blocks.push(current);
 		current = null;
 	}
 
@@ -70,7 +94,7 @@ function collectBlocks(
 				current = {
 					kind: 'section',
 					section: directive.name === 'start_of_chorus' ? 'chorus' : 'verse',
-					lines: [],
+					parts: [],
 					label: directive.label.trim() || null,
 					sourceIndex,
 					recalled: false
@@ -81,6 +105,45 @@ function collectBlocks(
 				flush();
 				continue;
 			}
+			if (directive.name === 'x_start_of_bis') {
+				if (activeBis) throw new Error('Nested {x_start_of_bis} directives are not supported.');
+				if (!current) {
+					current = {
+						kind: 'section',
+						section: 'plain',
+						parts: [],
+						label: null,
+						sourceIndex,
+						recalled: false
+					};
+				}
+				const rawRepeat = directive.attributes.repeat?.trim();
+				let repeat: number | null = null;
+				if (rawRepeat !== undefined) {
+					repeat = Number(rawRepeat);
+					if (!/^\d+$/.test(rawRepeat) || !Number.isSafeInteger(repeat) || repeat < 1) {
+						throw new Error('The repeat attribute of {x_start_of_bis} must be a positive integer.');
+					}
+				}
+				activeBis = {
+					kind: 'bis',
+					lines: [],
+					repeat,
+					label: directive.attributes.label ?? null,
+					marker:
+						repeat === null
+							? bisDisplay.defaultMarker
+							: bisDisplay.repeatMarkerTemplate.replaceAll('{count}', String(repeat))
+				};
+				current.parts.push(activeBis);
+				continue;
+			}
+			if (directive.name === 'x_end_of_bis') {
+				if (!activeBis) throw new Error('Unexpected {x_end_of_bis} directive.');
+				activeBis = null;
+				continue;
+			}
+			if (directive.name.startsWith('x_')) continue;
 			if (directive.name === 'chorus') {
 				flush();
 				blocks.push({
@@ -91,12 +154,15 @@ function collectBlocks(
 				continue;
 			}
 			if (directive.isComment()) {
-				if (current) {
-					current.lines.push({
+				if (activeBis || current) {
+					const comment: PreviewLine = {
+						kind: 'line',
 						segments: [{ chord: '', lyrics: directive.value }],
 						hasChords: false,
 						comment: true
-					});
+					};
+					if (activeBis) activeBis.lines.push(comment);
+					else current?.parts.push(comment);
 				} else {
 					blocks.push({ kind: 'comment', text: directive.value });
 				}
@@ -113,22 +179,33 @@ function collectBlocks(
 			}
 		}
 		if (segments.length === 0) {
-			if (current?.section === 'plain') flush();
-			else if (current)
-				current.lines.push({ segments: [{ chord: '', lyrics: '' }], hasChords: false });
+			const blank: PreviewLine = {
+				kind: 'line',
+				segments: [{ chord: '', lyrics: '' }],
+				hasChords: false
+			};
+			if (activeBis) activeBis.lines.push(blank);
+			else if (current?.section === 'plain') flush();
+			else current?.parts.push(blank);
 			continue;
 		}
 		if (!current) {
 			current = {
 				kind: 'section',
 				section: 'plain',
-				lines: [],
+				parts: [],
 				label: null,
 				sourceIndex,
 				recalled: false
 			};
 		}
-		current.lines.push({ segments, hasChords: segments.some((segment) => Boolean(segment.chord)) });
+		const previewLine: PreviewLine = {
+			kind: 'line',
+			segments,
+			hasChords: segments.some((segment) => Boolean(segment.chord))
+		};
+		if (activeBis) activeBis.lines.push(previewLine);
+		else current.parts.push(previewLine);
 	}
 	flush();
 	return blocks;
@@ -164,7 +241,8 @@ export function renderSongPreview(
 	content: string,
 	notation: Notation,
 	semitones: number,
-	chorusMode: ChorusMode = 'label'
+	chorusMode: ChorusMode = 'label',
+	bisDisplay: BisDisplayConfig = defaultBisDisplayConfig
 ): SongPreview {
 	let hasKey = false;
 	try {
@@ -192,7 +270,7 @@ export function renderSongPreview(
 
 		return {
 			title: song.getSingleMetadataValue('title'),
-			blocks: displayBlocks(collectBlocks(library, song), chorusMode),
+			blocks: displayBlocks(collectBlocks(library, song, bisDisplay), chorusMode),
 			hasKey,
 			error: null
 		};

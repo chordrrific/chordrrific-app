@@ -4,6 +4,7 @@
 	import { chorusMode, initChorusMode, setChorusMode } from '#lib/client/chorus-preference.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { renderSongPreview, type Notation } from '#lib/client/song-preview.js';
+	import SongLine from './SongLine.svelte';
 
 	let { content } = $props<{ content: string }>();
 	let notation = $state<Notation>('symbol');
@@ -73,15 +74,23 @@
 						class:chorus={block.section === 'chorus'}
 						class:recalled={block.recalled}
 					>
-						{#each block.lines as line, lineIndex (lineIndex)}
-							<div class="row" class:has-chords={line.hasChords} class:comment={line.comment}>
-								{#each line.segments as segment, segmentIndex (segmentIndex)}
-									<div class="column">
-										<div class="chord">{segment.chord}</div>
-										<div class="lyrics">{segment.lyrics}</div>
+						{#each block.parts as part, partIndex (partIndex)}
+							{#if part.kind === 'line'}
+								<SongLine line={part} />
+							{:else if part.kind === 'bis'}
+								<div class="bis-group">
+									<div class="bis-content">
+										{#each part.lines as line, lineIndex (lineIndex)}
+											<SongLine {line} />
+										{/each}
 									</div>
-								{/each}
-							</div>
+									<div class="bis-bracket" aria-hidden="true"></div>
+									<div class="bis-annotation">
+										<span class="bis-marker">{part.marker}</span>
+										{#if part.label !== null}<span class="bis-label">{part.label}</span>{/if}
+									</div>
+								</div>
+							{/if}
 						{/each}
 					</div>
 				{:else if block.kind === 'chorus-label'}

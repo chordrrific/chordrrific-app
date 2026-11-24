@@ -228,6 +228,15 @@ button.danger {
 	font-weight: 400;
 }
 .viewer {
+	--bis-line-color: #718f80;
+	--bis-line-width: 2px;
+	--bis-corner-width: 0.75rem;
+	--bis-corner-radius: 0.45rem;
+	--bis-column-gap: 0.35rem;
+	--bis-marker-color: #29433a;
+	--bis-marker-size: 0.95rem;
+	--bis-label-color: #6a7b72;
+	--bis-label-size: 0.78rem;
 	overflow: auto;
 	min-height: 14rem;
 	padding: 1rem;
@@ -276,6 +285,35 @@ button.danger {
 	min-height: 1.4em;
 	white-space: pre;
 	line-height: 1.4;
+}
+.viewer .bis-group {
+	display: grid;
+	grid-template-columns: max-content var(--bis-corner-width) max-content;
+	column-gap: var(--bis-column-gap);
+	align-items: stretch;
+	width: max-content;
+	margin: 0.2rem 0;
+}
+.viewer .bis-bracket {
+	border-top: var(--bis-line-width) solid var(--bis-line-color);
+	border-right: var(--bis-line-width) solid var(--bis-line-color);
+	border-bottom: var(--bis-line-width) solid var(--bis-line-color);
+	border-radius: 0 var(--bis-corner-radius) var(--bis-corner-radius) 0;
+}
+.viewer .bis-annotation {
+	display: flex;
+	flex-direction: column;
+	align-self: center;
+	white-space: nowrap;
+	transform: translateY(-0.15em);
+}
+.viewer .bis-marker {
+	color: var(--bis-marker-color);
+	font-size: var(--bis-marker-size);
+}
+.viewer .bis-label {
+	color: var(--bis-label-color);
+	font-size: var(--bis-label-size);
 }
 .viewer .chorus-reference {
 	display: table;

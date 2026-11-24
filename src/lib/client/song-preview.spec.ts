@@ -1,6 +1,12 @@
 import * as library from 'chordsheetjs';
 import { describe, expect, it } from 'vitest';
-import { renderSongPreview, type PreviewBlock, type SongPreview } from './song-preview.js';
+import {
+	renderSongPreview,
+	type PreviewBis,
+	type PreviewBlock,
+	type PreviewLine,
+	type SongPreview
+} from './song-preview.js';
 
 type Section = Extract<PreviewBlock, { kind: 'section' }>;
 
@@ -8,16 +14,24 @@ function sections(preview: SongPreview): Section[] {
 	return preview.blocks.filter((block): block is Section => block.kind === 'section');
 }
 
+function lines(section: Section): PreviewLine[] {
+	return section.parts.flatMap((part) => (part.kind === 'line' ? [part] : part.lines));
+}
+
 function lyrics(section: Section): string {
-	return section.lines
+	return lines(section)
 		.map((line) => line.segments.map((segment) => segment.lyrics).join(''))
 		.join('\n');
 }
 
 function chords(section: Section): string[] {
-	return section.lines.flatMap((line) =>
+	return lines(section).flatMap((line) =>
 		line.segments.map((segment) => segment.chord).filter(Boolean)
 	);
+}
+
+function bis(section: Section): PreviewBis[] {
+	return section.parts.filter((part): part is PreviewBis => part.kind === 'bis');
 }
 
 describe('song preview', () => {
@@ -106,11 +120,94 @@ describe('song preview', () => {
 		const preview = renderSongPreview(library, content, 'symbol', 0, 'expanded');
 		const repeated = sections(preview).at(-1)!;
 		expect(lyrics(repeated)).toBe('Uno\nSuave\nDos');
-		expect(repeated.lines[1].comment).toBe(true);
+		expect(lines(repeated)[1].comment).toBe(true);
 	});
 
 	it('shows an inline message when an expanded reference cannot be resolved', () => {
 		const preview = renderSongPreview(library, '{chorus: Missing}', 'symbol', 0, 'expanded');
 		expect(preview.blocks).toEqual([{ kind: 'missing-chorus', label: 'Missing' }]);
+	});
+
+	it('keeps an unparameterized bis inside its verse', () => {
+		const content =
+			'{start_of_verse}\n[E]Dim dom\nRep[B7]ican las camp[E]anas.\n' +
+			'{x_start_of_bis}\nDim dom\nLleg[B7]ó la Navi[E]dad.\n{x_end_of_bis}\n{end_of_verse}';
+		const preview = renderSongPreview(library, content, 'symbol', 0);
+		const verse = sections(preview)[0];
+		expect(preview.error).toBeNull();
+		expect(verse.section).toBe('verse');
+		expect(verse.parts.map((part) => part.kind)).toEqual(['line', 'line', 'bis']);
+		expect(bis(verse)[0].marker).toBe('(bis)');
+		expect(bis(verse)[0].label).toBeNull();
+		expect(lyrics(verse)).toBe('Dim dom\nRepican las campanas.\nDim dom\nLlegó la Navidad.');
+	});
+
+	it('uses a numeric repeat and preserves the label as text', () => {
+		const content =
+			'{x_start_of_bis repeat="3" label="<script>alert(1)</script>"}\n[C]Uno\n{x_end_of_bis}';
+		const preview = renderSongPreview(library, content, 'symbol', 0);
+		const group = bis(sections(preview)[0])[0];
+		expect(group.repeat).toBe(3);
+		expect(group.marker).toBe('(x3)');
+		expect(group.label).toBe('<script>alert(1)</script>');
+	});
+
+	it('allows the bis marker text to be configured', () => {
+		const config = { defaultMarker: 'Again', repeatMarkerTemplate: 'Play {count} times' };
+		const plain = renderSongPreview(
+			library,
+			'{x_start_of_bis}\n[C]Uno\n{x_end_of_bis}',
+			'symbol',
+			0,
+			'label',
+			config
+		);
+		const counted = renderSongPreview(
+			library,
+			'{x_start_of_bis repeat="2"}\n[C]Uno\n{x_end_of_bis}',
+			'symbol',
+			0,
+			'label',
+			config
+		);
+		expect(bis(sections(plain)[0])[0].marker).toBe('Again');
+		expect(bis(sections(counted)[0])[0].marker).toBe('Play 2 times');
+	});
+
+	it('repeats bis blocks when a chorus is expanded', () => {
+		const content =
+			'{start_of_chorus}\n[C]Uno\n' +
+			'{x_start_of_bis repeat="2" label="Tenores"}\n[D]Dos\n{x_end_of_bis}\n' +
+			'{end_of_chorus}\n\n{chorus}';
+		const preview = renderSongPreview(library, content, 'solfege', 0, 'expanded');
+		const repeated = sections(preview).at(-1)!;
+		expect(repeated.recalled).toBe(true);
+		expect(bis(repeated)[0].marker).toBe('(x2)');
+		expect(bis(repeated)[0].label).toBe('Tenores');
+		expect(chords(repeated)).toEqual(['Do', 'Re']);
+	});
+
+	it('reports invalid or unbalanced bis directives without crashing the preview', () => {
+		expect(
+			renderSongPreview(
+				library,
+				'{x_start_of_bis repeat="two"}\n[C]Uno\n{x_end_of_bis}',
+				'symbol',
+				0
+			).error
+		).toContain('positive integer');
+		expect(renderSongPreview(library, '{x_start_of_bis}\n[C]Uno', 'symbol', 0).error).toContain(
+			'Missing {x_end_of_bis}'
+		);
+		expect(renderSongPreview(library, '{x_end_of_bis}', 'symbol', 0).error).toContain(
+			'Unexpected {x_end_of_bis}'
+		);
+	});
+
+	it('ignores unrelated custom directives without adding blank paragraphs', () => {
+		const preview = renderSongPreview(library, '[C]Uno\n{x_something: value}\n[D]Dos', 'symbol', 0);
+		expect(preview.error).toBeNull();
+		expect(sections(preview)).toHaveLength(1);
+		expect(lyrics(sections(preview)[0])).toBe('Uno\nDos');
 	});
 });

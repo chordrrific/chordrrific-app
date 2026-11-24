@@ -19,6 +19,9 @@ export const preventChordOverlap: Action<HTMLDivElement> = (node) => {
 	let destroyed = false;
 
 	function layout() {
+		const bisContents = node.querySelectorAll<HTMLElement>('.bis-content');
+		for (const content of bisContents) content.style.paddingRight = '';
+
 		for (const row of node.querySelectorAll<HTMLElement>('.chord-sheet .row')) {
 			const labels = [...row.querySelectorAll<HTMLElement>('.column > .chord')].filter((label) =>
 				label.textContent?.trim()
@@ -33,6 +36,16 @@ export const preventChordOverlap: Action<HTMLDivElement> = (node) => {
 			labels.forEach((label, index) => {
 				if (offsets[index] > 0) label.style.transform = `translateX(${offsets[index]}px)`;
 			});
+		}
+
+		for (const content of bisContents) {
+			const contentRight = content.getBoundingClientRect().right;
+			const chordRights = [...content.querySelectorAll<HTMLElement>('.column > .chord')]
+				.filter((label) => label.textContent?.trim())
+				.map((label) => label.getBoundingClientRect().right);
+			const rightmostChord = Math.max(contentRight, ...chordRights);
+			const padding = rightmostChord > contentRight ? rightmostChord - contentRight + 4 : 0;
+			if (padding > 0) content.style.paddingRight = `${padding}px`;
 		}
 	}
 

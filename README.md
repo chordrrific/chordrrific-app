@@ -31,6 +31,16 @@ Songs store a separate searchable title and the original ChordPro text. The edit
 
 By default, a `{chorus}` reference appears as "Estribillo" ("Chorus" in English). The viewer can instead expand the referenced chorus; this preference is saved in the browser. An unlabelled reference uses the nearest preceding chorus. A named reference such as `{chorus: Chorus 2}` uses the chorus named by `{start_of_chorus: Chorus 2}`. Repeated lyrics are generated only for display and are never written back to the song.
 
+The custom `x_` directives below mark a passage to repeat. Both attributes are optional:
+
+```chordpro
+{x_start_of_bis repeat="2" label="Tenores"}
+[E]Sing this passage again.
+{x_end_of_bis}
+```
+
+The viewer draws a rounded bracket to the right. Without `repeat`, it shows `(bis)`; with a positive integer, it shows `(x2)`, `(x3)` and so on. `label` appears beneath the repeat marker as escaped text. Marker wording is defined by `BisDisplayConfig` in `src/lib/client/song-preview.ts`; the bracket and text styles use `--bis-*` CSS variables in `src/routes/layout.css` for future customization. Other `x_` directives are ignored.
+
 A song may belong to several collections. Every collection has its own song order. Songs and their tags and collections are private to their owner.
 
 ## Quality checks
