@@ -7,7 +7,7 @@ Chordrrific is the public, open-source ChordPro songbook app. MySweetChord is a 
 - SvelteKit + TypeScript strict + Tailwind CSS; Node adapter.
 - Prisma + SQLite only. `DATABASE_URL` is a SQLite `file:` URL; PostgreSQL is a future migration, not an environment-only switch.
 - Passwords: argon2. Sessions: application code based on Lucia's current guides; do not add the deprecated Lucia package.
-- ChordSheetJS runs in the browser only. Sanitize formatted HTML before rendering.
+- ChordSheetJS runs in the browser only for parsing and music transformations. Render parsed content through escaped Svelte text nodes; do not use its HTML formatters or raw HTML.
 - Vitest for unit and SQLite integration tests.
 
 ```
@@ -29,6 +29,7 @@ UI → client state → application services → core / infrastructure. Do not p
 4. A song may be in several collections; ordering belongs to the collection membership, not the song.
 5. Store original ChordPro in `Song.content` and the searchable title separately. Transposition and notation changes are view-only.
 6. SQLite is the only supported database for this version. Do not claim provider portability from `DATABASE_URL` alone.
+7. `{chorus}` references are presentation only. By default show a localized label; expanded mode copies the targeted chorus into the view without changing saved ChordPro. Unlabelled references use the nearest preceding chorus; named references match the chorus label.
 
 ## Workflow
 

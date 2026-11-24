@@ -242,15 +242,28 @@ button.danger {
 .viewer .paragraph {
 	margin: 0 0 1rem;
 }
+.viewer .paragraph.chorus {
+	padding-left: 0.7rem;
+	border-left: 2px solid #91a59a;
+}
+.viewer .paragraph.recalled {
+	border-left-style: dashed;
+}
 .viewer .row {
+	display: flex;
 	padding-top: 1.2em;
 	white-space: nowrap;
 	line-height: 1.4;
 }
+.viewer .row:not(.has-chords) {
+	padding-top: 0;
+}
+.viewer .row.comment {
+	font-style: italic;
+}
 .viewer .column {
 	position: relative;
-	display: inline-block;
-	vertical-align: top;
+	flex: none;
 }
 .viewer .column .chord {
 	position: absolute;
@@ -263,6 +276,18 @@ button.danger {
 	min-height: 1.4em;
 	white-space: pre;
 	line-height: 1.4;
+}
+.viewer .chorus-reference {
+	display: table;
+	margin: 0 0 1rem;
+	padding: 0.1rem 0.4rem;
+	border-radius: 0.15rem;
+	background: #e8ece9;
+	font-size: 0.95rem;
+}
+.viewer .song-comment {
+	margin: 0 0 1rem;
+	font-style: italic;
 }
 @media (max-width: 800px) {
 	.site-header {

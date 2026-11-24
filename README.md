@@ -27,7 +27,9 @@ For a production build, run `npm run build` and then `node build`. Set `ORIGIN` 
 
 An administrator creates accounts, can grant administrator access and can reset passwords. The last administrator cannot be deleted or demoted. Users can change their own passwords. Deleting an account deletes its songs, collections, tags and sessions.
 
-Songs store a separate searchable title and the original ChordPro text. The editor accepts plain text; the viewer uses ChordSheetJS in the browser. Add a `{key: C}` directive to enable Nashville notation. Transposition and notation changes affect only the view, not the saved text.
+Songs store a separate searchable title and the original ChordPro text. The editor accepts plain text; the viewer parses it with ChordSheetJS in the browser and renders it with Svelte. Add a `{key: C}` directive to enable Nashville notation. Transposition and notation changes affect only the view, not the saved text.
+
+By default, a `{chorus}` reference appears as "Estribillo" ("Chorus" in English). The viewer can instead expand the referenced chorus; this preference is saved in the browser. An unlabelled reference uses the nearest preceding chorus. A named reference such as `{chorus: Chorus 2}` uses the chorus named by `{start_of_chorus: Chorus 2}`. Repeated lyrics are generated only for display and are never written back to the song.
 
 A song may belong to several collections. Every collection has its own song order. Songs and their tags and collections are private to their owner.
 
@@ -63,7 +65,7 @@ Open `http://localhost:3000`. Use the same volume for each command so migrations
 
 ## Architecture
 
-`src/lib/core` contains pure domain validation without Svelte, Prisma or authentication dependencies. `src/lib/server` contains SQLite access, sessions and application services. SvelteKit API routes expose these services. The UI uses the API, and ChordSheetJS is loaded only in the browser. MySweetChord is a future separate private repository; this repository has no tenant model.
+`src/lib/core` contains pure domain validation without Svelte, Prisma or authentication dependencies. `src/lib/server` contains SQLite access, sessions and application services. SvelteKit API routes expose these services. The UI uses the API, and ChordSheetJS is loaded only in the browser for parsing and music transformations. The viewer builds safe Svelte text nodes from the parsed song. MySweetChord is a future separate private repository; this repository has no tenant model.
 
 ## Contributing
 
