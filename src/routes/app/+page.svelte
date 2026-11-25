@@ -3,6 +3,8 @@
 	import { request } from '#lib/client/api.js';
 	import { filterSongs, changedMembershipIds } from '#lib/client/catalog.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { formatChordPro } from '#lib/client/chordpro-language.js';
+	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 	import {
 		chordProFileAccept,
 		importChordProFiles,
@@ -10,13 +12,13 @@
 	} from '#lib/client/song-import.js';
 	import type { Collection, Song, Tag } from '#lib/client/types.js';
 	import SongViewer from '#lib/components/SongViewer.svelte';
+	import ChordProEditor from '#lib/components/ChordProEditor.svelte';
 
 	let songs = $state<Song[]>([]);
 	let collections = $state<Collection[]>([]);
 	let tags = $state<Tag[]>([]);
 	let selectedId = $state<string | null>(null);
 	let editing = $state(false);
-	let title = $state('');
 	let content = $state('');
 	let search = $state('');
 	let tagFilter = $state('');
@@ -52,7 +54,6 @@
 
 	function selectSong(song: Song) {
 		selectedId = song.id;
-		title = song.title;
 		content = song.content;
 		chosenTags = song.tags.map((link) => link.tagId);
 		chosenCollections = song.collections.map((link) => link.collectionId);
@@ -61,8 +62,7 @@
 	}
 	function newSong() {
 		selectedId = null;
-		title = '';
-		content = '{key: C}\n\n[C]';
+		content = '{title: }\n{key: C}\n\n[C]';
 		chosenTags = [];
 		chosenCollections = [];
 		editing = true;
@@ -92,10 +92,12 @@
 		busy = true;
 		message = '';
 		try {
+			if (!hasTitleDirective(content)) throw new Error(t($locale, 'titleDirectiveRequired'));
+			titleFromChordPro(content);
 			const song = await request<Song>(
 				selectedId ? `/api/songs/${selectedId}` : '/api/songs',
 				selectedId ? 'PATCH' : 'POST',
-				{ title, content }
+				{ content }
 			);
 			selectedId = song.id;
 			editing = false;
@@ -213,11 +215,16 @@
 		{#if editing}
 			<h2>{selectedId ? t($locale, 'edit') : t($locale, 'newSong')}</h2>
 			<form onsubmit={saveSong}>
-				<label>{t($locale, 'title')}<input bind:value={title} maxlength="160" required /></label>
-				<label>
-					{t($locale, 'content')}<textarea bind:value={content} spellcheck="false"></textarea>
-				</label>
+				<div class="editor-label">{t($locale, 'content')}</div>
+				<ChordProEditor
+					value={content}
+					label={t($locale, 'content')}
+					onChange={(value) => (content = value)}
+				/>
 				<div class="actions">
+					<button type="button" onclick={() => (content = formatChordPro(content))}>
+						{t($locale, 'formatSong')}
+					</button>
 					<button class="primary" disabled={busy}>{t($locale, 'save')}</button><button
 						type="button"
 						onclick={() => (editing = false)}

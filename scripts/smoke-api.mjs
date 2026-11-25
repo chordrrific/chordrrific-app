@@ -54,7 +54,7 @@ try {
 	let result = await call(
 		'/api/songs',
 		'POST',
-		{ title: `Smoke ${suffix}`, content: '{key: C}\n[C]Test' },
+		{ content: `{title: Smoke ${suffix}}\n{key: C}\n[C]Test` },
 		cookie
 	);
 	assert.equal(result.response.status, 201);

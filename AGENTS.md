@@ -27,7 +27,7 @@ UI → client state → application services → core / infrastructure. Do not p
 2. Never delete or demote the last administrator.
 3. Every song, collection and tag belongs to one user. Always verify ownership in server services, including relationship updates. Deleting a user cascades to all their data and sessions.
 4. A song may be in several collections; ordering belongs to the collection membership, not the song.
-5. Store original ChordPro in `Song.content` and the searchable title separately. Transposition and notation changes are view-only.
+5. Store ChordPro in `Song.content` and derive the separate searchable title from its required `{title: ...}` (or `{t: ...}`) directive on every save. Imports without that directive prepend it to the saved copy using the filename; source files remain untouched. Transposition and notation changes are view-only.
 6. SQLite is the only supported database for this version. Do not claim provider portability from `DATABASE_URL` alone.
 7. `{chorus}` references are presentation only. By default show a localized label; expanded mode copies the targeted chorus into the view without changing saved ChordPro. Unlabelled references use the nearest preceding chorus; named references match the chorus label.
 8. `x_start_of_bis` and `x_end_of_bis` are custom presentation directives. They can appear inside verses or choruses and nest up to two levels; the outer bracket must enclose and sit to the right of the inner one. All other `x_` directives are ignored. Preserve their content when expanding a chorus. Escape the optional label in Svelte and keep marker text and styles configurable in code.

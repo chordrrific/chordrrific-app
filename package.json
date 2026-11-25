@@ -55,10 +55,14 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
+		"@codemirror/autocomplete": "^6.20.4",
+		"@codemirror/state": "^6.7.6",
+		"@codemirror/view": "^6.44.0",
 		"@prisma/adapter-better-sqlite3": "^7.10.1",
 		"@prisma/client": "^7.10.1",
 		"argon2": "^0.45.2",
 		"chordsheetjs": "^18.0.0",
+		"codemirror": "^6.0.2",
 		"dotenv": "^18.0.10"
 	}
 }

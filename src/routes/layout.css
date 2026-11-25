@@ -123,6 +123,46 @@ textarea {
 	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 	line-height: 1.5;
 }
+.editor-label {
+	font-weight: 600;
+}
+.chordpro-editor .cm-editor {
+	min-height: 18rem;
+	border: 1px solid #b8c9be;
+	border-radius: 0.5rem;
+	background: #fff;
+	color: #182b28;
+	font-size: 0.95rem;
+}
+.chordpro-editor .cm-editor.cm-focused {
+	outline: 2px solid #15634f;
+	outline-offset: 1px;
+}
+.chordpro-editor .cm-scroller {
+	max-height: 36rem;
+	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.chordpro-editor .cm-content {
+	min-height: 18rem;
+	padding: 0.6rem 0;
+}
+.chordpro-editor .cm-chordpro-chord {
+	color: #136a47;
+	font-weight: 700;
+}
+.chordpro-editor .cm-chordpro-directive {
+	color: #6747a2;
+}
+.chordpro-editor .cm-chordpro-parameter {
+	color: #a64c1c;
+}
+.chordpro-editor .cm-chordpro-value {
+	color: #216699;
+}
+.chordpro-editor .cm-chordpro-environment-match {
+	background: #fff0b8;
+	outline: 1px solid #c18c1b;
+}
 button,
 .button {
 	border: 1px solid #b8c9be;

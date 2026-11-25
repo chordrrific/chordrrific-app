@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { cleanIds, cleanSongContent, cleanText } from '#lib/core/validation.js';
+import { titleFromChordPro } from '#lib/core/song-title.js';
 import { db } from './db';
 
 export function listSongs(ownerId: string, query?: string, tagId?: string, collectionId?: string) {
@@ -25,22 +26,24 @@ export async function getSong(ownerId: string, id: string) {
 }
 
 export function createSong(ownerId: string, input: Record<string, unknown>) {
+	const content = cleanSongContent(input.content);
 	return db.song.create({
 		data: {
 			ownerId,
-			title: cleanText(input.title, 'Title', 160),
-			content: cleanSongContent(input.content)
+			title: titleFromChordPro(content),
+			content
 		}
 	});
 }
 
 export async function updateSong(ownerId: string, id: string, input: Record<string, unknown>) {
 	await getSong(ownerId, id);
+	const content = input.content === undefined ? undefined : cleanSongContent(input.content);
 	return db.song.update({
 		where: { id },
 		data: {
-			title: input.title === undefined ? undefined : cleanText(input.title, 'Title', 160),
-			content: input.content === undefined ? undefined : cleanSongContent(input.content)
+			title: content === undefined ? undefined : titleFromChordPro(content),
+			content
 		}
 	});
 }

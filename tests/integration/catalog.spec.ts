@@ -8,7 +8,8 @@ import {
 	getSong,
 	listSongs,
 	setCollectionSongs,
-	setSongTags
+	setSongTags,
+	updateSong
 } from '../../src/lib/server/catalog';
 
 afterAll(async () => {
@@ -16,11 +17,31 @@ afterAll(async () => {
 });
 
 describe('SQLite integration', () => {
+	it('indexes the ChordPro title and requires it on every content save', async () => {
+		const user = await createUser({
+			email: 'title@example.com',
+			password: 'long-test-password-title'
+		});
+		expect(() => createSong(user.id, { content: '[C]No title' })).toThrow('{title: ...}');
+		const song = await createSong(user.id, {
+			title: 'Ignored',
+			content: '{title: First}\n[C]Text'
+		});
+		expect(song.title).toBe('First');
+		const updated = await updateSong(user.id, song.id, { content: '{t: Second}\n[D]Text' });
+		expect(updated.title).toBe('Second');
+		await expect(updateSong(user.id, song.id, { content: '[E]No title' })).rejects.toThrow(
+			'{title: ...}'
+		);
+		expect((await getSong(user.id, song.id)).title).toBe('Second');
+		await deleteUser(user.id);
+	});
+
 	it('keeps libraries private, preserves collection order, and cascades user deletion', async () => {
 		const a = await createUser({ email: 'a@example.com', password: 'long-test-password-a' });
 		const b = await createUser({ email: 'b@example.com', password: 'long-test-password-b' });
-		const song1 = await createSong(a.id, { title: 'Alpha', content: '[C]One' });
-		const song2 = await createSong(a.id, { title: 'Beta', content: '[G]Two' });
+		const song1 = await createSong(a.id, { content: '{title: Alpha}\n[C]One' });
+		const song2 = await createSong(a.id, { content: '{title: Beta}\n[G]Two' });
 		const collection = await createCollection(a.id, { name: 'Setlist' });
 		const tag = await createTag(a.id, { name: 'Acoustic' });
 		await setCollectionSongs(a.id, collection.id, [song2.id, song1.id]);

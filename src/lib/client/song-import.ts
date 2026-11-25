@@ -1,4 +1,5 @@
 import { cleanSongContent, cleanText } from '#lib/core/validation.js';
+import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 
 type ChordSheetLibrary = typeof import('chordsheetjs');
 
@@ -25,13 +26,17 @@ export async function prepareChordProFile(
 	const extension = extensions.find((value) => file.name.toLowerCase().endsWith(value));
 	if (!extension) throw new Error('Unsupported ChordPro file extension');
 
-	const content = await file.text();
-	if (!content.trim()) throw new Error('The file is empty');
+	const originalContent = await file.text();
+	if (!originalContent.trim()) throw new Error('The file is empty');
+	cleanSongContent(originalContent);
+	new library.ChordProParser().parse(originalContent);
+	const fallbackTitle = file.name.slice(0, -extension.length).replace(/[{}\r\n]/g, ' ');
+	const existingTitle = hasTitleDirective(originalContent);
+	const title = existingTitle
+		? titleFromChordPro(originalContent)
+		: cleanText(fallbackTitle, 'Title', 160);
+	const content = existingTitle ? originalContent : `{title: ${title}}\n${originalContent}`;
 	cleanSongContent(content);
-	const song = new library.ChordProParser().parse(content);
-	const fallbackTitle = file.name.slice(0, -extension.length);
-	const metadataTitle = song.getSingleMetadataValue('title')?.trim();
-	const title = cleanText(metadataTitle || fallbackTitle, 'Title', 160);
 	return { title, content };
 }
 
