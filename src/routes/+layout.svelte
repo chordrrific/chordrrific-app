@@ -4,10 +4,21 @@
 	import { resolve } from '$app/paths';
 	import { locale, initLocale, setLocale, t } from '#lib/client/i18n.js';
 	import { request } from '#lib/client/api.js';
+	import Icon from '#lib/components/Icon.svelte';
 	import './layout.css';
 
 	let { data, children } = $props();
-	onMount(initLocale);
+	let dark = $state(false);
+	onMount(() => {
+		initLocale();
+		dark = localStorage.getItem('chordrrific-theme') === 'dark';
+		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+	});
+	function toggleTheme() {
+		dark = !dark;
+		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+		localStorage.setItem('chordrrific-theme', dark ? 'dark' : 'light');
+	}
 	async function signOut() {
 		await request('/api/auth/logout', 'POST');
 		await refreshAll();
@@ -16,20 +27,57 @@
 </script>
 
 <header class="site-header">
-	<a class="brand" href={resolve(data.user ? '/app' : '/login')}>♫ {t($locale, 'brand')}</a>
-	<nav aria-label="Main navigation">
+	<a class="brand" href={resolve(data.user ? '/app' : '/login')} aria-label="Chordrrific">
+		<span class="brand-mark">♫</span><span>Chordrrific</span>
+	</a>
+	<nav class="header-actions" aria-label="Main navigation">
+		<button
+			class="icon-button"
+			type="button"
+			onclick={toggleTheme}
+			aria-label={t($locale, dark ? 'lightMode' : 'darkMode')}
+			title={t($locale, dark ? 'lightMode' : 'darkMode')}
+		>
+			<Icon name={dark ? 'sun' : 'moon'} />
+		</button>
+		<details class="header-menu">
+			<summary
+				class="icon-button"
+				aria-label={t($locale, 'language')}
+				title={t($locale, 'language')}
+			>
+				<Icon name="globe" />
+			</summary>
+			<div class="header-dropdown language-options">
+				<button type="button" class:active={$locale === 'es'} onclick={() => setLocale('es')}>
+					Español
+				</button><button
+					type="button"
+					class:active={$locale === 'en'}
+					onclick={() => setLocale('en')}
+				>
+					English
+				</button>
+			</div>
+		</details>
 		{#if data.user}
-			<a href={resolve('/app')}>{t($locale, 'songs')}</a>
-			<a href={resolve('/app/collections')}>{t($locale, 'collections')}</a>
-			<a href={resolve('/app/tags')}>{t($locale, 'tags')}</a>
-			{#if data.user.isAdmin}<a href={resolve('/app/admin')}>{t($locale, 'admin')}</a>{/if}
-			<a href={resolve('/app/settings')}>{t($locale, 'settings')}</a>
-			<button class="nav-button" onclick={signOut}>{t($locale, 'signOut')}</button>
+			<details class="header-menu">
+				<summary
+					class="icon-button"
+					aria-label={t($locale, 'userMenu')}
+					title={t($locale, 'userMenu')}
+				>
+					<Icon name="user" />
+				</summary>
+				<div class="header-dropdown">
+					<span class="menu-email">{data.user.email}</span><a href={resolve('/app/settings')}>
+						{t($locale, 'settings')}
+					</a>{#if data.user.isAdmin}<a href={resolve('/app/admin')}>
+							{t($locale, 'admin')}
+						</a>{/if}<button type="button" onclick={signOut}>{t($locale, 'signOut')}</button>
+				</div>
+			</details>
 		{/if}
 	</nav>
-	<div class="language-switch" aria-label="Language">
-		<button class:active={$locale === 'es'} onclick={() => setLocale('es')}>ES</button>
-		<button class:active={$locale === 'en'} onclick={() => setLocale('en')}>EN</button>
-	</div>
 </header>
 <main>{@render children()}</main>
