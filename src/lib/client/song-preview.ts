@@ -44,6 +44,7 @@ interface SectionBlock {
 	label: string | null;
 	sourceIndex: number;
 	recalled: boolean;
+	targetSourceIndex?: number;
 }
 
 interface ChorusReference {
@@ -61,7 +62,7 @@ type SourceBlock = SectionBlock | ChorusReference | CommentBlock;
 export type PreviewBlock =
 	| SectionBlock
 	| CommentBlock
-	| { kind: 'chorus-label' }
+	| { kind: 'chorus-label'; sourceIndex: number; targetSourceIndex: number }
 	| { kind: 'missing-chorus'; label: string | null };
 
 export interface SongPreview {
@@ -227,17 +228,31 @@ function resolveChorus(
 	return previous.at(-1) ?? (reference.label ? matches[0] : undefined);
 }
 
-function displayBlocks(source: SourceBlock[], mode: ChorusMode): PreviewBlock[] {
+function displayBlocks(
+	source: SourceBlock[],
+	mode: ChorusMode,
+	referenceModes: Readonly<Record<number, ChorusMode>>
+): PreviewBlock[] {
 	const choruses = source.filter(
 		(block): block is SectionBlock => block.kind === 'section' && block.section === 'chorus'
 	);
 	return source.map((block): PreviewBlock => {
 		if (block.kind !== 'chorus-reference') return block;
-		if (mode === 'label') return { kind: 'chorus-label' };
 		const target = resolveChorus(block, choruses);
-		return target
-			? { ...target, sourceIndex: block.sourceIndex, recalled: true }
-			: { kind: 'missing-chorus', label: block.label };
+		if (!target) return { kind: 'missing-chorus', label: block.label };
+		if ((referenceModes[block.sourceIndex] ?? mode) === 'label') {
+			return {
+				kind: 'chorus-label',
+				sourceIndex: block.sourceIndex,
+				targetSourceIndex: target.sourceIndex
+			};
+		}
+		return {
+			...target,
+			sourceIndex: block.sourceIndex,
+			recalled: true,
+			targetSourceIndex: target.sourceIndex
+		};
 	});
 }
 
@@ -247,7 +262,8 @@ export function renderSongPreview(
 	notation: Notation,
 	semitones: number,
 	chorusMode: ChorusMode = 'label',
-	bisDisplay: BisDisplayConfig = defaultBisDisplayConfig
+	bisDisplay: BisDisplayConfig = defaultBisDisplayConfig,
+	referenceModes: Readonly<Record<number, ChorusMode>> = {}
 ): SongPreview {
 	let hasKey = false;
 	try {
@@ -275,7 +291,7 @@ export function renderSongPreview(
 
 		return {
 			title: song.getSingleMetadataValue('title'),
-			blocks: displayBlocks(collectBlocks(library, song, bisDisplay), chorusMode),
+			blocks: displayBlocks(collectBlocks(library, song, bisDisplay), chorusMode, referenceModes),
 			hasKey,
 			error: null
 		};

@@ -31,7 +31,7 @@ Songs store a separate searchable title and the original ChordPro text. The edit
 
 Use **Importar canción/es** to choose one or more ChordPro files (`.cho`, `.crd`, `.chopro`, `.chord`, `.chordpro`, `.pro` or `.txt`). Each file creates a separate song. Its `{title}` (or `{t}`) becomes the song title; when absent, the filename without its extension is used. The app shows imported and failed files individually. Importing reads the original files without changing them.
 
-By default, a `{chorus}` reference appears as "Estribillo" ("Chorus" in English). The viewer can instead expand the referenced chorus; this preference is saved in the browser. An unlabelled reference uses the nearest preceding chorus. A named reference such as `{chorus: Chorus 2}` uses the chorus named by `{start_of_chorus: Chorus 2}`. Repeated lyrics are generated only for display and are never written back to the song.
+By default, a `{chorus}` reference appears as "Estribillo" ("Chorus" in English). The label links to the original chorus, and its arrow expands or collapses that reference alone. The viewer can also expand all references by default; this preference is saved in the browser. An unlabelled reference uses the nearest preceding chorus. A named reference such as `{chorus: Chorus 2}` uses the chorus named by `{start_of_chorus: Chorus 2}`. Repeated lyrics are generated only for display and are never written back to the song. The renderer builds a typed preview tree and displays it through Svelte components and snippets; it does not generate or inject HTML.
 
 The custom `x_` directives below mark a passage to repeat. Both attributes are optional:
 

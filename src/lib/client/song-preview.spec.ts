@@ -2,6 +2,7 @@ import * as library from 'chordsheetjs';
 import { describe, expect, it } from 'vitest';
 import {
 	renderSongPreview,
+	defaultBisDisplayConfig,
 	type PreviewBis,
 	type PreviewBlock,
 	type PreviewLine,
@@ -80,6 +81,11 @@ describe('song preview', () => {
 		const preview = renderSongPreview(library, content, 'symbol', 0);
 		expect(preview.title).toBe('Test');
 		expect(preview.blocks.map((block) => block.kind)).toEqual(['section', 'chorus-label']);
+		const [original, reference] = preview.blocks;
+		expect(original.kind).toBe('section');
+		expect(reference.kind).toBe('chorus-label');
+		if (original.kind !== 'section' || reference.kind !== 'chorus-label') return;
+		expect(reference.targetSourceIndex).toBe(original.sourceIndex);
 		expect(lyrics(sections(preview)[0])).toBe('Uno');
 	});
 
@@ -90,8 +96,61 @@ describe('song preview', () => {
 		expect(preview.error).toBeNull();
 		expect(original.recalled).toBe(false);
 		expect(repeated.recalled).toBe(true);
+		expect(repeated.targetSourceIndex).toBe(original.sourceIndex);
 		expect(lyrics(repeated)).toBe('Uno');
 		expect(chords(repeated)).toEqual(['Re']);
+	});
+
+	it('expands and collapses individual references without changing their targets', () => {
+		const content =
+			'{start_of_chorus: One}\n[C]Primero\n{end_of_chorus}\n' +
+			'{start_of_chorus: Two}\n[D]Segundo\n{end_of_chorus}\n' +
+			'{chorus: One}\n{chorus: Two}';
+		const collapsed = renderSongPreview(library, content, 'symbol', 0);
+		const labels = collapsed.blocks.filter((block) => block.kind === 'chorus-label');
+		expect(labels).toHaveLength(2);
+		expect(labels[0].targetSourceIndex).toBe(sections(collapsed)[0].sourceIndex);
+		expect(labels[1].targetSourceIndex).toBe(sections(collapsed)[1].sourceIndex);
+
+		const firstOnly = renderSongPreview(
+			library,
+			content,
+			'symbol',
+			0,
+			'label',
+			defaultBisDisplayConfig,
+			{ [labels[0].sourceIndex]: 'expanded' }
+		);
+		expect(firstOnly.blocks.map((block) => block.kind)).toEqual([
+			'section',
+			'section',
+			'section',
+			'chorus-label'
+		]);
+		expect(sections(firstOnly)[2].targetSourceIndex).toBe(labels[0].targetSourceIndex);
+		expect(lyrics(sections(firstOnly)[2])).toBe('Primero');
+
+		const secondCollapsed = renderSongPreview(
+			library,
+			content,
+			'symbol',
+			0,
+			'expanded',
+			defaultBisDisplayConfig,
+			{ [labels[1].sourceIndex]: 'label' }
+		);
+		expect(secondCollapsed.blocks.map((block) => block.kind)).toEqual([
+			'section',
+			'section',
+			'section',
+			'chorus-label'
+		]);
+		expect(sections(secondCollapsed)[2].targetSourceIndex).toBe(labels[0].targetSourceIndex);
+	});
+
+	it('reports a missing chorus in collapsed mode instead of rendering a broken link', () => {
+		const preview = renderSongPreview(library, '{chorus: Missing}', 'symbol', 0);
+		expect(preview.blocks).toEqual([{ kind: 'missing-chorus', label: 'Missing' }]);
 	});
 
 	it('uses the nearest preceding chorus for an unlabelled reference', () => {

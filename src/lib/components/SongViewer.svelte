@@ -3,12 +3,23 @@
 	import { preventChordOverlap } from '#lib/client/chord-layout.js';
 	import { chorusMode, initChorusMode, setChorusMode } from '#lib/client/chorus-preference.js';
 	import { locale, t } from '#lib/client/i18n.js';
-	import { renderSongPreview, type Notation, type PreviewPart } from '#lib/client/song-preview.js';
+	import {
+		defaultBisDisplayConfig,
+		renderSongPreview,
+		type ChorusMode,
+		type Notation,
+		type PreviewPart
+	} from '#lib/client/song-preview.js';
 	import SongLine from './SongLine.svelte';
 
 	let { content } = $props<{ content: string }>();
+	const viewerId = $props.id();
 	let notation = $state<Notation>('symbol');
 	let semitones = $state(0);
+	let referenceModes = $state<{ content: string | null; modes: Record<number, ChorusMode> }>({
+		content: null,
+		modes: {}
+	});
 	let library = $state.raw<typeof import('chordsheetjs') | null>(null);
 	let loadError = $state<string | null>(null);
 
@@ -23,11 +34,51 @@
 			});
 	});
 
+	let activeReferenceModes = $derived(
+		referenceModes.content === content ? referenceModes.modes : {}
+	);
 	let preview = $derived(
-		library ? renderSongPreview(library, content, notation, semitones, $chorusMode) : null
+		library
+			? renderSongPreview(
+					library,
+					content,
+					notation,
+					semitones,
+					$chorusMode,
+					defaultBisDisplayConfig,
+					activeReferenceModes
+				)
+			: null
 	);
 	let hasKey = $derived(preview?.hasKey ?? false);
+
+	function toggleReference(sourceIndex: number, expanded: boolean) {
+		referenceModes = {
+			content,
+			modes: {
+				...activeReferenceModes,
+				[sourceIndex]: expanded ? 'label' : 'expanded'
+			}
+		};
+	}
 </script>
+
+{#snippet chorusReference(sourceIndex: number, targetSourceIndex: number, expanded: boolean)}
+	<div class="chorus-reference" class:expanded>
+		<button
+			type="button"
+			class="chorus-toggle"
+			aria-label={t($locale, expanded ? 'collapseChorus' : 'expandChorus')}
+			aria-expanded={expanded}
+			onclick={() => toggleReference(sourceIndex, expanded)}
+		>
+			<svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+				<path d="m7 4 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+			</svg>
+		</button>
+		<a href={`#${viewerId}-chorus-${targetSourceIndex}`}>{t($locale, 'chorusLabel')}</a>
+	</div>
+{/snippet}
 
 {#snippet renderPart(part: PreviewPart)}
 	{#if part.kind === 'line'}
@@ -69,8 +120,10 @@
 		{t($locale, 'chorusDisplay')}
 		<select
 			value={$chorusMode}
-			onchange={(event) =>
-				setChorusMode(event.currentTarget.value === 'expanded' ? 'expanded' : 'label')}
+			onchange={(event) => {
+				referenceModes = { content, modes: {} };
+				setChorusMode(event.currentTarget.value === 'expanded' ? 'expanded' : 'label');
+			}}
 		>
 			<option value="label">{t($locale, 'chorusLabel')}</option>
 			<option value="expanded">{t($locale, 'chorusExpanded')}</option>
@@ -88,7 +141,13 @@
 			{#if preview.title}<h1 class="title">{preview.title}</h1>{/if}
 			{#each preview.blocks as block, blockIndex (blockIndex)}
 				{#if block.kind === 'section'}
+					{#if block.recalled && block.targetSourceIndex !== undefined}
+						{@render chorusReference(block.sourceIndex, block.targetSourceIndex, true)}
+					{/if}
 					<div
+						id={block.section === 'chorus' && !block.recalled
+							? `${viewerId}-chorus-${block.sourceIndex}`
+							: undefined}
 						class="paragraph"
 						class:chorus={block.section === 'chorus'}
 						class:recalled={block.recalled}
@@ -98,7 +157,7 @@
 						{/each}
 					</div>
 				{:else if block.kind === 'chorus-label'}
-					<div class="chorus-reference">{t($locale, 'chorusLabel')}</div>
+					{@render chorusReference(block.sourceIndex, block.targetSourceIndex, false)}
 				{:else if block.kind === 'missing-chorus'}
 					<div class="error" role="status">
 						{t($locale, 'chorusMissing')}{block.label ? `: ${block.label}` : ''}
