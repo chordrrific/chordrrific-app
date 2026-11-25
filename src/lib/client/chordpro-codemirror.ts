@@ -16,6 +16,13 @@ import {
 } from '@codemirror/view';
 import { minimalSetup } from 'codemirror';
 import {
+	chordCompletionContext,
+	chordReplacement,
+	chordSuggestions,
+	defaultChordCompletionConfig,
+	type ChordCompletionConfig
+} from './chord-completion.js';
+import {
 	availableParameters,
 	directiveDefinition,
 	directiveNames,
@@ -31,6 +38,7 @@ import {
 export interface ChordProEditorController {
 	setValue(value: string): void;
 	setLabel(label: string): void;
+	setChordCompletionConfig(config: ChordCompletionConfig): void;
 	destroy(): void;
 }
 
@@ -160,11 +168,13 @@ export function createChordProEditor(
 	host: HTMLElement,
 	initialValue: string,
 	onChange: (value: string) => void,
-	label: string
+	label: string,
+	chordConfig: ChordCompletionConfig = defaultChordCompletionConfig
 ): ChordProEditorController {
 	let wrapSelection: { from: number; to: number } | null = null;
 	let forceDirectives = false;
 	let pendingTab: { openingFrom: number; target: number } | null = null;
+	let currentChordConfig = chordConfig;
 
 	function makeDirectiveCompletion(
 		name: string,
@@ -228,6 +238,30 @@ export function createChordProEditor(
 				makeDirectiveCompletion(name, null, context, selection)
 			);
 			return { from: context.pos, options, filter: false };
+		}
+		if (!forced) {
+			const chordContext = chordCompletionContext(context.state.doc.toString(), context.pos);
+			if (chordContext) {
+				const options: Completion[] = chordSuggestions(chordContext.query, currentChordConfig).map(
+					(chord) => ({
+						label: chord.label,
+						type: 'variable',
+						apply(view) {
+							const edit = chordReplacement(
+								view.state.doc.toString(),
+								context.pos,
+								chordContext,
+								chord.value
+							);
+							view.dispatch({
+								changes: { from: edit.from, to: edit.to, insert: edit.text },
+								selection: { anchor: edit.cursor }
+							});
+						}
+					})
+				);
+				return options.length ? { from: chordContext.from + 1, options, filter: false } : null;
+			}
 		}
 
 		const named = /^([A-Za-z_][\w-]*)(.*)$/.exec(fragment);
@@ -347,6 +381,9 @@ export function createChordProEditor(
 		},
 		setLabel(value) {
 			view.contentDOM.setAttribute('aria-label', value);
+		},
+		setChordCompletionConfig(config) {
+			currentChordConfig = config;
 		},
 		destroy() {
 			view.dom.removeEventListener('contextmenu', contextMenu);

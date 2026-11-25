@@ -1,11 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ChordProEditorController } from '#lib/client/chordpro-codemirror.js';
+	import {
+		defaultChordCompletionConfig,
+		type ChordCompletionConfig
+	} from '#lib/client/chord-completion.js';
 
-	let { value, onChange, label } = $props<{
+	let {
+		value,
+		onChange,
+		label,
+		chordCompletionConfig = defaultChordCompletionConfig
+	} = $props<{
 		value: string;
 		onChange: (value: string) => void;
 		label: string;
+		chordCompletionConfig?: ChordCompletionConfig;
 	}>();
 	let host: HTMLDivElement;
 	let controller: ChordProEditorController | null = null;
@@ -15,7 +25,9 @@
 		let active = true;
 		void import('#lib/client/chordpro-codemirror.js')
 			.then(({ createChordProEditor }) => {
-				if (active) controller = createChordProEditor(host, value, onChange, label);
+				if (active) {
+					controller = createChordProEditor(host, value, onChange, label, chordCompletionConfig);
+				}
 			})
 			.catch(() => {
 				loadError = true;
@@ -29,6 +41,7 @@
 	$effect(() => {
 		controller?.setValue(value);
 		controller?.setLabel(label);
+		controller?.setChordCompletionConfig(chordCompletionConfig);
 	});
 </script>
 
