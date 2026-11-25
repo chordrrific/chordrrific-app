@@ -34,6 +34,14 @@ describe('SQLite integration', () => {
 			'{title: ...}'
 		);
 		expect((await getSong(user.id, song.id)).title).toBe('Second');
+		const tagged = await updateSong(user.id, song.id, {
+			content: '{title: Second}\n{tag: Acústico}\n[D]Text'
+		});
+		expect((await getSong(user.id, tagged.id)).tags.map((link) => link.tag.name)).toEqual([
+			'Acústico'
+		]);
+		await updateSong(user.id, song.id, { content: '{title: Second}\n[D]Text' });
+		expect((await getSong(user.id, song.id)).tags).toEqual([]);
 		await deleteUser(user.id);
 	});
 
@@ -46,6 +54,7 @@ describe('SQLite integration', () => {
 		const tag = await createTag(a.id, { name: 'Acoustic' });
 		await setCollectionSongs(a.id, collection.id, [song2.id, song1.id]);
 		await setSongTags(a.id, song1.id, [tag.id]);
+		expect((await getSong(a.id, song1.id)).content).toContain('{tag: Acoustic}');
 		expect(
 			(
 				await db.collectionSong.findMany({

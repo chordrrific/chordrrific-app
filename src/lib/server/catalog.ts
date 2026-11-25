@@ -1,7 +1,26 @@
 import { error } from '@sveltejs/kit';
 import { cleanIds, cleanSongContent, cleanText } from '#lib/core/validation.js';
 import { titleFromChordPro } from '#lib/core/song-title.js';
+import { replaceSongTags, songMetadata } from '#lib/core/song-metadata.js';
+import type { Prisma } from './generated/prisma/client';
 import { db } from './db';
+
+async function syncSongTags(
+	tx: Prisma.TransactionClient,
+	ownerId: string,
+	songId: string,
+	content: string
+) {
+	await tx.songTag.deleteMany({ where: { songId } });
+	for (const name of songMetadata(content).tag) {
+		const tag = await tx.tag.upsert({
+			where: { ownerId_name: { ownerId, name } },
+			create: { ownerId, name },
+			update: {}
+		});
+		await tx.songTag.create({ data: { songId, tagId: tag.id } });
+	}
+}
 
 export function listSongs(ownerId: string, query?: string, tagId?: string, collectionId?: string) {
 	return db.song.findMany({
@@ -27,24 +46,27 @@ export async function getSong(ownerId: string, id: string) {
 
 export function createSong(ownerId: string, input: Record<string, unknown>) {
 	const content = cleanSongContent(input.content);
-	return db.song.create({
-		data: {
-			ownerId,
-			title: titleFromChordPro(content),
-			content
-		}
+	const title = titleFromChordPro(content);
+	return db.$transaction(async (tx) => {
+		const song = await tx.song.create({
+			data: { ownerId, title, content }
+		});
+		await syncSongTags(tx, ownerId, song.id, content);
+		return song;
 	});
 }
 
 export async function updateSong(ownerId: string, id: string, input: Record<string, unknown>) {
 	await getSong(ownerId, id);
 	const content = input.content === undefined ? undefined : cleanSongContent(input.content);
-	return db.song.update({
-		where: { id },
-		data: {
-			title: content === undefined ? undefined : titleFromChordPro(content),
-			content
-		}
+	const title = content === undefined ? undefined : titleFromChordPro(content);
+	return db.$transaction(async (tx) => {
+		const song = await tx.song.update({
+			where: { id },
+			data: { title, content }
+		});
+		if (content !== undefined) await syncSongTags(tx, ownerId, id, content);
+		return song;
 	});
 }
 
@@ -134,14 +156,15 @@ export async function deleteTag(ownerId: string, id: string) {
 }
 
 export async function setSongTags(ownerId: string, id: string, idsInput: unknown) {
-	await getSong(ownerId, id);
+	const song = await getSong(ownerId, id);
 	const tagIds = cleanIds(idsInput, 'tagIds');
-	const owned = await db.tag.count({ where: { ownerId, id: { in: tagIds } } });
-	if (owned !== tagIds.length) error(400, 'All tags must belong to your account');
-	await db.$transaction(async (tx) => {
-		await tx.songTag.deleteMany({ where: { songId: id } });
-		if (tagIds.length)
-			await tx.songTag.createMany({ data: tagIds.map((tagId) => ({ songId: id, tagId })) });
+	const tags = await db.tag.findMany({ where: { ownerId, id: { in: tagIds } } });
+	if (tags.length !== tagIds.length) error(400, 'All tags must belong to your account');
+	await updateSong(ownerId, id, {
+		content: replaceSongTags(
+			song.content,
+			tags.map((tag) => tag.name)
+		)
 	});
 	return getSong(ownerId, id);
 }
