@@ -68,6 +68,17 @@
 		editing = true;
 		message = '';
 	}
+	function beginEditing() {
+		if (!selected) return;
+		content = selected.content;
+		editing = true;
+		message = '';
+	}
+	function cancelEditing() {
+		content = selected?.content ?? '';
+		editing = false;
+		message = '';
+	}
 	function toggle(id: string, list: string[]): string[] {
 		return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
 	}
@@ -227,7 +238,7 @@
 					</button>
 					<button class="primary" disabled={busy}>{t($locale, 'save')}</button><button
 						type="button"
-						onclick={() => (editing = false)}
+						onclick={cancelEditing}
 					>
 						{t($locale, 'cancel')}
 					</button>
@@ -239,7 +250,7 @@
 			<div class="actions" style="justify-content:space-between">
 				<h2>{selected.title}</h2>
 				<div class="actions">
-					<button onclick={() => (editing = true)}>{t($locale, 'edit')}</button><button
+					<button onclick={beginEditing}>{t($locale, 'edit')}</button><button
 						class="danger"
 						onclick={deleteSelected}
 					>

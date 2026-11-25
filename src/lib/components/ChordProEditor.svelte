@@ -18,7 +18,7 @@
 		chordCompletionConfig?: ChordCompletionConfig;
 	}>();
 	let host: HTMLDivElement;
-	let controller: ChordProEditorController | null = null;
+	let controller = $state.raw<ChordProEditorController | null>(null);
 	let loadError = $state(false);
 
 	onMount(() => {

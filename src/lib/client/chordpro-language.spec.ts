@@ -79,6 +79,14 @@ describe('ChordPro editor language', () => {
 		expect(formatChordPro(formatChordPro(source))).toBe(formatChordPro(source));
 	});
 
+	it('leaves a blank line before each standard opening and after each standard closing', () => {
+		const source =
+			'{title: Song}\n{start_of_verse}\nFirst\n{end_of_verse}\n{start_of_chorus}\nSecond\n{end_of_chorus}\nLast';
+		expect(formatChordPro(source)).toBe(
+			'{title: Song}\n\n{start_of_verse}\nFirst\n{end_of_verse}\n\n{start_of_chorus}\nSecond\n{end_of_chorus}\n\nLast'
+		);
+	});
+
 	it('does not treat embedded SVG markup as ChordPro directives', () => {
 		const source = '{start_of_svg}\n<svg>{title: Not a song}</svg>\n{end_of_svg}';
 		expect(scanDirectives(source).map((token) => token.name)).toEqual([
