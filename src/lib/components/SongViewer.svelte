@@ -125,7 +125,7 @@
 				setChorusMode(event.currentTarget.value === 'expanded' ? 'expanded' : 'label');
 			}}
 		>
-			<option value="label">{t($locale, 'chorusLabel')}</option>
+			<option value="label">{t($locale, 'chorusOptionLabel')}</option>
 			<option value="expanded">{t($locale, 'chorusExpanded')}</option>
 		</select>
 	</label>
