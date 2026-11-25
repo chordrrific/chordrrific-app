@@ -83,9 +83,8 @@ function editorDecorations(
 		}
 		const definition = directiveDefinition(token.name);
 		if (definition?.name === 'define' || definition?.name === 'chord') {
-			for (const parameter of body.matchAll(
-				/(?:^|\s)(base-fret|frets|fingers|keys|copy|copyall|diagram|display|format)(?=\s)/g
-			)) {
+			for (const parameter of body.matchAll(/(?:^|\s)([A-Za-z][\w-]*)(?=\s)/g)) {
+				if (!definition.parameters?.includes(parameter[1])) continue;
 				const from = token.bodyFrom + parameter.index + parameter[0].indexOf(parameter[1]);
 				marks.push(mark(from, from + parameter[1].length, 'cm-chordpro-parameter'));
 			}

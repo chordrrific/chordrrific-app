@@ -35,6 +35,22 @@ const environmentAliases: Record<string, [string, string]> = {
 	grid: ['sog', 'eog']
 };
 const fontTargets = ['chord', 'chorus', 'footer', 'grid', 'tab', 'label', 'toc', 'text', 'title'];
+const imageParameters = [
+	'src',
+	'id',
+	'width',
+	'height',
+	'scale',
+	'align',
+	'center',
+	'border',
+	'spread',
+	'trbl',
+	'href',
+	'x',
+	'y',
+	'anchor'
+];
 
 export const directives: readonly DirectiveDefinition[] = [
 	{ name: 'new_song', aliases: ['ns'], parameters: ['toc'] },
@@ -51,28 +67,32 @@ export const directives: readonly DirectiveDefinition[] = [
 	{
 		name: 'image',
 		required: 'source',
-		parameters: [
-			'src',
-			'id',
-			'width',
-			'height',
-			'scale',
-			'align',
-			'center',
-			'border',
-			'spread',
-			'trbl',
-			'href',
-			'x',
-			'y',
-			'anchor'
-		]
+		parameters: imageParameters
 	},
 	...environments.flatMap((name): DirectiveDefinition[] => [
 		{
 			name: `start_of_${name}`,
 			aliases: environmentAliases[name]?.slice(0, 1),
-			parameters: name === 'svg' ? ['label', 'align', 'scale', 'width', 'height'] : ['label'],
+			parameters:
+				name === 'abc'
+					? ['label', ...imageParameters, 'split', 'staffsep']
+					: name === 'textblock'
+						? [
+								'label',
+								...imageParameters,
+								'padding',
+								'flush',
+								'vflush',
+								'textstyle',
+								'textsize',
+								'textspacing',
+								'textcolor',
+								'background',
+								'omit'
+							]
+						: name === 'svg'
+							? ['label', ...imageParameters]
+							: ['label'],
 			environment: 'start'
 		},
 		{ name: `end_of_${name}`, aliases: environmentAliases[name]?.slice(1), environment: 'end' }
@@ -90,7 +110,12 @@ export const directives: readonly DirectiveDefinition[] = [
 			'copyall',
 			'diagram',
 			'display',
-			'format'
+			'format',
+			'root',
+			'qual',
+			'ext',
+			'bass',
+			'base_fret'
 		]
 	},
 	{
@@ -105,7 +130,12 @@ export const directives: readonly DirectiveDefinition[] = [
 			'copyall',
 			'diagram',
 			'display',
-			'format'
+			'format',
+			'root',
+			'qual',
+			'ext',
+			'bass',
+			'base_fret'
 		]
 	},
 	{ name: 'transpose' },
@@ -278,11 +308,11 @@ export function availableParameters(name: string, body: string, query = ''): str
 	const used = new Set(
 		[
 			...body.matchAll(
-				positional
-					? /(?:^|\s)(base-fret|frets|fingers|keys|copy|copyall|diagram|display|format)(?=\s)/g
-					: /(?:^|\s)([A-Za-z][\w-]*)\s*=/g
+				positional ? /(?:^|\s)([A-Za-z][\w-]*)(?=\s)/g : /(?:^|\s)([A-Za-z][\w-]*)\s*=/g
 			)
-		].map((match) => match[1])
+		]
+			.map((match) => match[1])
+			.filter((parameter) => parameters.includes(parameter))
 	);
 	return parameters.filter((parameter) => !used.has(parameter) && parameter.includes(query));
 }

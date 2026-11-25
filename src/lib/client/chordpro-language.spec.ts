@@ -55,6 +55,9 @@ describe('ChordPro editor language', () => {
 		expect(availableParameters('x_start_of_bis', ' repeat="2" ')).toEqual(['label']);
 		expect(availableParameters('image', ': src="score.png" align="left" ')).not.toContain('src');
 		expect(availableParameters('define', ': C frets 0 3 2 0 1 0 ')).not.toContain('frets');
+		expect(availableParameters('start_of_abc', ' label="Intro" ')).toContain('staffsep');
+		expect(availableParameters('start_of_svg', ' align="left" ')).toContain('href');
+		expect(availableParameters('start_of_textblock', ' flush="right" ')).toContain('padding');
 	});
 
 	it('wraps complete lines even when only part of a line is selected', () => {
