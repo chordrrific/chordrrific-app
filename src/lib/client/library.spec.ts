@@ -5,6 +5,7 @@ import {
 	displayAuthor,
 	displayAuthorFacet,
 	libraryFacets,
+	retainAvailableFacets,
 	soleCollectionFilter,
 	soleDisplayFilter,
 	visibleLibrarySongs
@@ -94,6 +95,26 @@ describe('library facets', () => {
 			key: 'composer',
 			value: 'Bach'
 		});
+	});
+	it('removes filters whose values disappear after songs or memberships change', () => {
+		const active = [
+			{ key: 'collection', value: 'Concierto', mode: 'include' },
+			{ key: 'tag', value: 'Pop', mode: 'exclude' },
+			{ key: 'artist', value: 'AMARAL', mode: 'include' },
+			{ key: 'composer', mode: 'include' }
+		] as const;
+		const updatedSongs = [
+			{ ...songs[0], content: '{title: A}\n{artist: Amaral}', collections: [] },
+			songs[2]
+		];
+		const available = libraryFacets(updatedSongs);
+		expect(retainAvailableFacets(active, available)).toEqual(active.slice(2));
+		expect(retainAvailableFacets(active.slice(0, 2), available)).toEqual([]);
+		expect(visibleLibrarySongs(updatedSongs, [], '', []).map((song) => song.id)).toEqual([
+			'a',
+			'c'
+		]);
+		expect(retainAvailableFacets([{ key: 'artist', mode: 'include' }], [])).toEqual([]);
 	});
 	it('matches song titles regardless of accents and letter case', () => {
 		const titled = { ...songs[0], title: 'Título' };

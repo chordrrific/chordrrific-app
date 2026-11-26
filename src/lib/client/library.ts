@@ -87,6 +87,21 @@ export function libraryFacets(songs: readonly Song[]): Facet[] {
 	});
 }
 
+export function retainAvailableFacets(
+	active: readonly FacetSelection[],
+	available: readonly Facet[]
+): FacetSelection[] {
+	const byKey = new Map(available.map((facet) => [facet.key, facet]));
+	return active.filter((selection) => {
+		const facet = byKey.get(selection.key);
+		if (!facet) return false;
+		if (selection.value === undefined) return true;
+		return facet.values.some(
+			(entry) => entry.value.toLocaleLowerCase() === selection.value?.toLocaleLowerCase()
+		);
+	});
+}
+
 export function cycleFacet(
 	active: readonly FacetSelection[],
 	key: FacetKey,

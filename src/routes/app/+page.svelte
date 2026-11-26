@@ -13,6 +13,7 @@
 		createSongSearch,
 		cycleFacet,
 		libraryFacets,
+		retainAvailableFacets,
 		soleCollectionFilter,
 		soleDisplayFilter,
 		visibleLibrarySongs,
@@ -105,10 +106,13 @@
 	);
 	async function loadCatalog() {
 		try {
-			[songs, collections] = await Promise.all([
+			const [loadedSongs, loadedCollections] = await Promise.all([
 				request<Song[]>('/api/songs'),
 				request<Collection[]>('/api/collections')
 			]);
+			songs = loadedSongs;
+			collections = loadedCollections;
+			if (filters.length) filters = retainAvailableFacets(filters, libraryFacets(loadedSongs));
 			selectedIds = selectedIds.filter((id) => songs.some((song) => song.id === id));
 		} catch (cause) {
 			void notify(
