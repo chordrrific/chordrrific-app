@@ -1145,6 +1145,7 @@ body:has(.library-shell) > div > main {
 	flex: 1 1 0;
 	min-width: 0;
 	overflow: hidden;
+	text-align: center;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
