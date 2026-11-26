@@ -6,6 +6,8 @@
 	import { request } from '#lib/client/api.js';
 	import Icon from '#lib/components/Icon.svelte';
 	import NotificationCenter from '#lib/components/NotificationCenter.svelte';
+	import ConfirmationDialog from '#lib/components/ConfirmationDialog.svelte';
+	import { confirmation, resolveConfirmation } from '#lib/client/confirmation.js';
 	import { initializeNotifications } from '#lib/client/notifications.js';
 	import './layout.css';
 
@@ -130,3 +132,7 @@
 	</nav>
 </header>
 <main>{@render children()}</main>
+{#if $confirmation}<ConfirmationDialog
+		request={$confirmation}
+		onResolve={resolveConfirmation}
+	/>{/if}

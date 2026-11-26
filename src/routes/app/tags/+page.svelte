@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { confirmAction } from '#lib/client/confirmation.js';
 	import type { Tag } from '#lib/client/types.js';
 	let tags = $state<Tag[]>([]);
 	let name = $state('');
@@ -40,7 +41,7 @@
 		}
 	}
 	async function remove(id: string) {
-		if (!confirm(t($locale, 'confirmDelete'))) return;
+		if (!(await confirmAction(t($locale, 'confirmDelete'), { destructive: true }))) return;
 		try {
 			await request(`/api/tags/${id}`, 'DELETE');
 			await load();

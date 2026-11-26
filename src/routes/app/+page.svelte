@@ -12,6 +12,7 @@
 	import { locale, t } from '#lib/client/i18n.js';
 	import { formatChordPro } from '#lib/client/chordpro-language.js';
 	import { notify, notifyTransient } from '#lib/client/notifications.js';
+	import { confirmAction } from '#lib/client/confirmation.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 	import { chordProFileAccept, importChordProFiles } from '#lib/client/song-import.js';
@@ -323,7 +324,10 @@
 	async function deleteSongs(ids: readonly string[]) {
 		if (
 			!ids.length ||
-			!confirm(ids.length === 1 ? t($locale, 'confirmDelete') : t($locale, 'confirmBulkDelete'))
+			!(await confirmAction(
+				ids.length === 1 ? t($locale, 'confirmDelete') : t($locale, 'confirmBulkDelete'),
+				{ destructive: true }
+			))
 		)
 			return;
 		busy = true;

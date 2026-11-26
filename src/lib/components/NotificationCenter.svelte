@@ -9,6 +9,7 @@
 		toasts
 	} from '#lib/client/notifications.js';
 	import Icon from './Icon.svelte';
+	import { confirmAction } from '#lib/client/confirmation.js';
 
 	let { open, onToggle, onClose } = $props<{
 		open: boolean;
@@ -26,10 +27,14 @@
 			failure = cause instanceof Error ? cause.message : String(cause);
 		}
 	}
-	function clearAll() {
+	async function clearAll() {
 		onClose();
-		if (!$notifications.length || !confirm(t($locale, 'confirmDeleteAllNotifications'))) return;
-		void act(removeAllNotifications);
+		if (
+			!$notifications.length ||
+			!(await confirmAction(t($locale, 'confirmDeleteAllNotifications'), { destructive: true }))
+		)
+			return;
+		await act(removeAllNotifications);
 	}
 	function date(value: string): string {
 		return new Intl.DateTimeFormat($locale, { dateStyle: 'short', timeStyle: 'short' }).format(

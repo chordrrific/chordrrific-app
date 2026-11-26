@@ -1278,6 +1278,13 @@ main {
 .unsaved-dialog .actions {
 	justify-content: flex-end;
 }
+.confirmation-dialog {
+	margin: 0;
+	color: var(--ink);
+}
+.confirmation-dialog::backdrop {
+	background: #091712ae;
+}
 @media (max-width: 800px) {
 	.mobile-only {
 		display: inline-grid;

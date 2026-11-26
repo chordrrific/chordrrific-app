@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { confirmAction } from '#lib/client/confirmation.js';
 	import type { User } from '#lib/client/types.js';
 	let users = $state<User[]>([]);
 	let email = $state('');
@@ -54,7 +55,7 @@
 		}
 	}
 	async function remove(user: User) {
-		if (!confirm(t($locale, 'confirmDelete'))) return;
+		if (!(await confirmAction(t($locale, 'confirmDelete'), { destructive: true }))) return;
 		try {
 			await request(`/api/users/${user.id}`, 'DELETE');
 			await load();

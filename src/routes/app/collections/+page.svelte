@@ -3,6 +3,7 @@
 	import { request } from '#lib/client/api.js';
 	import { collectionSongIds, moved } from '#lib/client/catalog.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { confirmAction } from '#lib/client/confirmation.js';
 	import type { Collection, Song } from '#lib/client/types.js';
 
 	let collections = $state<Collection[]>([]);
@@ -47,7 +48,7 @@
 		}
 	}
 	async function remove(id: string) {
-		if (!confirm(t($locale, 'confirmDelete'))) return;
+		if (!(await confirmAction(t($locale, 'confirmDelete'), { destructive: true }))) return;
 		try {
 			await request(`/api/collections/${id}`, 'DELETE');
 			await load();
