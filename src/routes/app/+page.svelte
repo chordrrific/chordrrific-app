@@ -35,7 +35,9 @@
 	let creating = $state(false);
 	let modalMode = $state<'view' | 'edit'>('view');
 	let content = $state('');
+	let savedContent = $state('');
 	let pendingSongId = $state<string | null>(null);
+	let pendingExit = $state<'close' | 'view' | null>(null);
 	let membershipKind = $state<'tag' | 'collection' | null>(null);
 	let membershipTargets = $state<string[]>([]);
 	let membershipNames = $state<string[]>([]);
@@ -125,47 +127,66 @@
 		creating = false;
 		modalMode = mode;
 		content = song.content;
+		savedContent = song.content;
 		modalOpen = true;
 		pendingSongId = null;
+		pendingExit = null;
 	}
 	function newSong() {
 		modalId = null;
 		creating = true;
 		modalMode = 'edit';
 		content = '{title: }\n{key: C}\n\n[C]';
+		savedContent = content;
 		modalOpen = true;
 		pendingSongId = null;
+		pendingExit = null;
 	}
-	function closeSong() {
+	function forceCloseSong() {
 		modalOpen = false;
 		creating = false;
 		content = '';
+		savedContent = '';
 		pendingSongId = null;
+		pendingExit = null;
+	}
+	function finishLeavingEditor(action: 'close' | 'view') {
+		pendingExit = null;
+		content = savedContent;
+		if (action === 'close') forceCloseSong();
+		else modalMode = 'view';
+	}
+	function requestLeaveEditor(action: 'close' | 'view') {
+		if (busy) return;
+		if (modalMode === 'edit' && content !== savedContent) {
+			pendingExit = action;
+			return;
+		}
+		finishLeavingEditor(action);
+	}
+	function discardAndLeave() {
+		if (pendingExit) finishLeavingEditor(pendingExit);
 	}
 	function switchMode() {
 		if (modalMode === 'edit') {
-			if (creating) {
-				closeSong();
-				return;
-			}
-			content = modalSong?.content ?? '';
-			modalMode = 'view';
+			requestLeaveEditor(creating ? 'close' : 'view');
 		} else {
 			content = modalSong?.content ?? '';
+			savedContent = content;
 			modalMode = 'edit';
 		}
 	}
 	function navigateSong(delta: number) {
 		const song = visibleSongs[modalIndex + delta];
 		if (!song) return;
-		if (modalMode === 'edit' && content !== modalSong?.content) {
+		if (modalMode === 'edit' && content !== savedContent) {
 			pendingSongId = song.id;
 			return;
 		}
 		openSong(song, modalMode);
 	}
 	function gestureBegin(x: number, y: number, target: EventTarget | null) {
-		if (creating || pendingSongId || !(target instanceof Element)) return;
+		if (creating || pendingSongId || pendingExit || !(target instanceof Element)) return;
 		if (
 			target.closest(
 				'button, a, input, textarea, select, .chordpro-editor, [contenteditable="true"]'
@@ -183,14 +204,16 @@
 	}
 	function keydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
-			if (pendingSongId) {
+			if (pendingExit) {
+				if (!busy) pendingExit = null;
+			} else if (pendingSongId) {
 				if (!busy) pendingSongId = null;
 			} else if (membershipKind) membershipKind = null;
-			else if (modalOpen) closeSong();
+			else if (modalOpen) requestLeaveEditor('close');
 			else sidebarOpen = false;
 			return;
 		}
-		if (!modalOpen || creating || pendingSongId || membershipKind) return;
+		if (!modalOpen || creating || pendingSongId || pendingExit || membershipKind) return;
 		if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
 		if (
 			event.target instanceof Element &&
@@ -199,6 +222,12 @@
 			return;
 		event.preventDefault();
 		navigateSong(event.key === 'ArrowLeft' ? -1 : 1);
+	}
+	function beforeUnload(event: BeforeUnloadEvent) {
+		if (modalOpen && modalMode === 'edit' && content !== savedContent) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
 	}
 	function cardOpen(song: Song, event: MouseEvent) {
 		if (event.ctrlKey || event.metaKey) {
@@ -259,6 +288,7 @@
 			modalId = song.id;
 			creating = false;
 			content = song.content;
+			savedContent = song.content;
 			void notify('success', t($locale, 'saved'));
 			return true;
 		} catch (cause) {
@@ -296,7 +326,7 @@
 		busy = true;
 		try {
 			for (const id of ids) await request(`/api/songs/${id}`, 'DELETE');
-			if (modalId && ids.includes(modalId)) closeSong();
+			if (modalId && ids.includes(modalId)) forceCloseSong();
 			selectedIds = [];
 			await loadCatalog();
 			void notify('success', t($locale, 'deleted'));
@@ -429,7 +459,12 @@
 	}
 </script>
 
-<svelte:window ontouchstart={touchBegin} ontouchend={touchEnd} onkeydown={keydown} />
+<svelte:window
+	ontouchstart={touchBegin}
+	ontouchend={touchEnd}
+	onkeydown={keydown}
+	onbeforeunload={beforeUnload}
+/>
 <svelte:head><title>{t($locale, 'songs')} · Chordrrific</title></svelte:head>
 <div class="library-shell">
 	{#if sidebarOpen}<button
@@ -594,7 +629,7 @@
 						<Icon name={modalMode === 'view' ? 'edit' : 'eye'} />
 					</button>{/if}<button
 					class="icon-button"
-					onclick={closeSong}
+					onclick={() => requestLeaveEditor('close')}
 					aria-label={t($locale, 'close')}
 				>
 					<Icon name="close" />
@@ -614,7 +649,7 @@
 							{t($locale, 'formatSong')}
 						</button><button class="primary" disabled={busy}>{t($locale, 'save')}</button><button
 							type="button"
-							onclick={creating ? closeSong : switchMode}
+							onclick={() => requestLeaveEditor(creating ? 'close' : 'view')}
 						>
 							{t($locale, 'cancel')}
 						</button>
@@ -695,6 +730,8 @@
 	<div
 		class="unsaved-dialog"
 		role="alertdialog"
+		tabindex="-1"
+		use:focusOnMount
 		aria-modal="true"
 		aria-label={t($locale, 'unsavedNavigation')}
 	>
@@ -704,6 +741,28 @@
 				{t($locale, 'stayEditing')}
 			</button><button type="button" class="primary" disabled={busy} onclick={saveAndNavigate}>
 				{t($locale, 'saveAndNavigate')}
+			</button>
+		</div>
+	</div>
+{/if}
+
+{#if pendingExit}
+	<div class="dialog-scrim top"></div>
+	<div
+		class="unsaved-dialog"
+		role="alertdialog"
+		tabindex="-1"
+		use:focusOnMount
+		aria-modal="true"
+		aria-label={t($locale, 'unsavedDiscard')}
+	>
+		<p>{t($locale, 'unsavedDiscard')}</p>
+		<div class="actions">
+			<button type="button" onclick={() => (pendingExit = null)}>
+				{t($locale, 'continueEditing')}
+			</button>
+			<button type="button" class="danger" onclick={discardAndLeave}>
+				{t($locale, 'discardChanges')}
 			</button>
 		</div>
 	</div>

@@ -11,6 +11,7 @@
 
 	let { data, children } = $props();
 	let dark = $state(false);
+	let openMenu = $state<'language' | 'notifications' | 'user' | null>(null);
 	onMount(() => {
 		initLocale();
 		dark = localStorage.getItem('chordrrific-theme') === 'dark';
@@ -24,7 +25,25 @@
 		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 		localStorage.setItem('chordrrific-theme', dark ? 'dark' : 'light');
 	}
+	function toggleMenu(menu: 'language' | 'notifications' | 'user') {
+		openMenu = openMenu === menu ? null : menu;
+	}
+	function outsideMenu(event: PointerEvent) {
+		if (openMenu && event.target instanceof Element && !event.target.closest('.header-menu'))
+			openMenu = null;
+	}
+	function closeMenuOnEscape(event: KeyboardEvent) {
+		if (openMenu && event.key === 'Escape') {
+			openMenu = null;
+			event.stopImmediatePropagation();
+		}
+	}
+	function chooseLanguage(value: 'es' | 'en') {
+		setLocale(value);
+		openMenu = null;
+	}
 	async function signOut() {
+		openMenu = null;
 		await request('/api/auth/logout', 'POST');
 		await initializeNotifications(null);
 		await refreshAll();
@@ -32,6 +51,7 @@
 	}
 </script>
 
+<svelte:window onpointerdown={outsideMenu} onkeydown={closeMenuOnEscape} />
 <header class="site-header">
 	<a class="brand" href={resolve(data.user ? '/app' : '/login')} aria-label="Chordrrific">
 		<span class="brand-mark">♫</span><span>Chordrrific</span>
@@ -46,44 +66,64 @@
 		>
 			<Icon name={dark ? 'sun' : 'moon'} />
 		</button>
-		<details class="header-menu">
-			<summary
+		<div class="header-menu">
+			<button
 				class="icon-button"
+				type="button"
 				aria-label={t($locale, 'language')}
 				title={t($locale, 'language')}
+				aria-expanded={openMenu === 'language'}
+				onclick={() => toggleMenu('language')}
 			>
 				<Icon name="globe" />
-			</summary>
-			<div class="header-dropdown language-options">
-				<button type="button" class:active={$locale === 'es'} onclick={() => setLocale('es')}>
-					Español
-				</button><button
-					type="button"
-					class:active={$locale === 'en'}
-					onclick={() => setLocale('en')}
-				>
-					English
-				</button>
-			</div>
-		</details>
+			</button>
+			{#if openMenu === 'language'}<div class="header-dropdown language-options">
+					<button
+						type="button"
+						class:active={$locale === 'es'}
+						onclick={() => chooseLanguage('es')}
+					>
+						Español
+					</button><button
+						type="button"
+						class:active={$locale === 'en'}
+						onclick={() => chooseLanguage('en')}
+					>
+						English
+					</button>
+				</div>{/if}
+		</div>
 		{#if data.user}
-			<NotificationCenter />
-			<details class="header-menu">
-				<summary
+			<NotificationCenter
+				open={openMenu === 'notifications'}
+				onToggle={() => toggleMenu('notifications')}
+				onClose={() => (openMenu = null)}
+			/>
+			<div class="header-menu">
+				<button
 					class="icon-button"
+					type="button"
 					aria-label={t($locale, 'userMenu')}
 					title={t($locale, 'userMenu')}
+					aria-expanded={openMenu === 'user'}
+					onclick={() => toggleMenu('user')}
 				>
 					<Icon name="user" />
-				</summary>
-				<div class="header-dropdown">
-					<span class="menu-email">{data.user.email}</span><a href={resolve('/app/settings')}>
-						{t($locale, 'settings')}
-					</a>{#if data.user.isAdmin}<a href={resolve('/app/admin')}>
-							{t($locale, 'admin')}
-						</a>{/if}<button type="button" onclick={signOut}>{t($locale, 'signOut')}</button>
-				</div>
-			</details>
+				</button>
+				{#if openMenu === 'user'}<div class="header-dropdown">
+						<span class="menu-email">{data.user.email}</span><a
+							href={resolve('/app/settings')}
+							onclick={() => (openMenu = null)}
+						>
+							{t($locale, 'settings')}
+						</a>{#if data.user.isAdmin}<a
+								href={resolve('/app/admin')}
+								onclick={() => (openMenu = null)}
+							>
+								{t($locale, 'admin')}
+							</a>{/if}<button type="button" onclick={signOut}>{t($locale, 'signOut')}</button>
+					</div>{/if}
+			</div>
 		{/if}
 	</nav>
 </header>

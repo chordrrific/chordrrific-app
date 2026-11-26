@@ -142,7 +142,10 @@ const strings = {
 		unsavedNavigation:
 			'Hay cambios sin guardar en esta canción. ¿Quieres guardarlos antes de pasar a otra?',
 		saveAndNavigate: 'Guardar y cambiar',
-		stayEditing: 'Cancelar y seguir editando'
+		stayEditing: 'Cancelar y seguir editando',
+		unsavedDiscard: 'Hay cambios sin guardar. Si sales de la edición, se perderán.',
+		discardChanges: 'Descartar cambios',
+		continueEditing: 'Seguir editando'
 	},
 	en: {
 		brand: 'Chordrrific',
@@ -268,7 +271,10 @@ const strings = {
 		deleteNotification: 'Delete notification',
 		unsavedNavigation: 'This song has unsaved changes. Save them before moving to another song?',
 		saveAndNavigate: 'Save and move',
-		stayEditing: 'Cancel and keep editing'
+		stayEditing: 'Cancel and keep editing',
+		unsavedDiscard: 'There are unsaved changes. Leaving the editor will discard them.',
+		discardChanges: 'Discard changes',
+		continueEditing: 'Keep editing'
 	}
 } as const;
 

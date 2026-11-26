@@ -9,6 +9,11 @@
 	} from '#lib/client/notifications.js';
 	import Icon from './Icon.svelte';
 
+	let { open, onToggle, onClose } = $props<{
+		open: boolean;
+		onToggle: () => void;
+		onClose: () => void;
+	}>();
 	let failure = $state('');
 	let unread = $derived($notifications.filter((entry) => !entry.readAt).length);
 	let visibleToasts = $derived(
@@ -19,6 +24,7 @@
 	);
 	async function act(action: () => Promise<void>) {
 		failure = '';
+		onClose();
 		try {
 			await action();
 		} catch (cause) {
@@ -32,41 +38,47 @@
 	}
 </script>
 
-<details class="header-menu notification-menu">
-	<summary
+<div class="header-menu notification-menu">
+	<button
 		class="icon-button notification-bell"
+		type="button"
 		aria-label={t($locale, 'notifications')}
 		title={t($locale, 'notifications')}
+		aria-expanded={open}
+		onclick={onToggle}
 	>
 		<Icon name="bell" />
 		{#if unread > 0}<span class="notification-badge">{unread > 99 ? '99+' : unread}</span>{/if}
-	</summary>
-	<div class="notification-panel">
-		<h2>{t($locale, 'notifications')}</h2>
-		{#if !$notifications.length}<p class="muted">{t($locale, 'noNotifications')}</p>{/if}
-		{#if failure}<p class="error" role="alert">{failure}</p>{/if}
-		<ul>
-			{#each $notifications as entry (entry.id)}
-				<li class:unread={!entry.readAt} class:error-kind={entry.kind === 'error'}>
-					<div class="notification-entry-heading">
-						<strong>{entry.title}</strong><time datetime={entry.createdAt}>
-							{date(entry.createdAt)}
-						</time>
-					</div>
-					{#if entry.body}<p>{entry.body}</p>{/if}
-					<div class="notification-actions">
-						{#if !entry.readAt}<button type="button" onclick={() => act(() => markRead(entry.id))}>
-								<Icon name="check" size={15} />{t($locale, 'markAsRead')}
-							</button>{/if}
-						<button type="button" onclick={() => act(() => removeNotification(entry.id))}>
-							<Icon name="trash" size={15} />{t($locale, 'deleteNotification')}
-						</button>
-					</div>
-				</li>
-			{/each}
-		</ul>
-	</div>
-</details>
+	</button>
+	{#if open}<div class="notification-panel">
+			<h2>{t($locale, 'notifications')}</h2>
+			{#if !$notifications.length}<p class="muted">{t($locale, 'noNotifications')}</p>{/if}
+			{#if failure}<p class="error" role="alert">{failure}</p>{/if}
+			<ul>
+				{#each $notifications as entry (entry.id)}
+					<li class:unread={!entry.readAt} class:error-kind={entry.kind === 'error'}>
+						<div class="notification-entry-heading">
+							<strong>{entry.title}</strong><time datetime={entry.createdAt}>
+								{date(entry.createdAt)}
+							</time>
+						</div>
+						{#if entry.body}<p>{entry.body}</p>{/if}
+						<div class="notification-actions">
+							{#if !entry.readAt}<button
+									type="button"
+									onclick={() => act(() => markRead(entry.id))}
+								>
+									<Icon name="check" size={15} />{t($locale, 'markAsRead')}
+								</button>{/if}
+							<button type="button" onclick={() => act(() => removeNotification(entry.id))}>
+								<Icon name="trash" size={15} />{t($locale, 'deleteNotification')}
+							</button>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		</div>{/if}
+</div>
 
 <div class="toast-stack" aria-live="polite">
 	{#each visibleToasts as entry (entry.id)}
