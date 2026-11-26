@@ -611,7 +611,7 @@ main {
 .sidebar-title {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	gap: 0.35rem;
 	padding: 0.3rem 0.5rem 0.65rem;
 }
 .sidebar-title h2 {
@@ -619,11 +619,15 @@ main {
 	font-size: 1.05rem;
 }
 .clear-filters {
-	margin: 0 0.35rem 0.65rem;
+	margin-left: auto;
 	padding: 0.25rem 0.4rem;
 	border: 0;
+	background: transparent;
 	color: var(--accent);
 	font-size: 0.85rem;
+}
+.clear-filters:disabled {
+	visibility: hidden;
 }
 .facet-list {
 	display: grid;
@@ -742,7 +746,7 @@ main {
 }
 .facet-values {
 	list-style: none;
-	margin: 0 0 0.35rem 1.6rem;
+	margin: 0 0 0.35rem 2.4rem;
 	padding: 0;
 }
 .facet-values li {

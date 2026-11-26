@@ -94,7 +94,7 @@
 	function chooseFacet(key: FacetKey, value: string | undefined, additive: boolean) {
 		filters = cycleFacet(filters, key, value, additive);
 		selectedIds = [];
-		if (window.innerWidth <= 800) sidebarOpen = false;
+		if (!additive && window.innerWidth <= 800) sidebarOpen = false;
 	}
 	function togglePin(key: FacetKey) {
 		pinned = pinned.includes(key) ? pinned.filter((item) => item !== key) : [...pinned, key];
@@ -479,6 +479,14 @@
 		<div class="sidebar-title">
 			<h2>{t($locale, 'filters')}</h2>
 			<button
+				class="clear-filters"
+				disabled={!filters.length}
+				aria-label={`${t($locale, 'clearFilters')} ${t($locale, 'filters')}`}
+				onclick={() => (filters = [])}
+			>
+				{t($locale, 'clearFilters')}
+			</button>
+			<button
 				class="icon-button mobile-only"
 				aria-label={t($locale, 'close')}
 				onclick={() => (sidebarOpen = false)}
@@ -486,9 +494,6 @@
 				<Icon name="close" />
 			</button>
 		</div>
-		{#if filters.length}<button class="clear-filters" onclick={() => (filters = [])}>
-				{t($locale, 'clearFilters')}
-			</button>{/if}
 		<FacetSidebar
 			{facets}
 			active={filters}
