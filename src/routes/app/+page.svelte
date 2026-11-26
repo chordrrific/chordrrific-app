@@ -844,7 +844,7 @@
 					>
 						<Icon name={modalMode === 'view' ? 'edit' : 'eye'} />
 					</button><button
-						class="icon-button"
+						class="icon-button danger"
 						disabled={busy || !modalSong}
 						onclick={() => modalSong && void deleteSongs([modalSong.id])}
 						aria-label={`${t($locale, 'delete')}: ${modalSong?.title ?? ''}`}

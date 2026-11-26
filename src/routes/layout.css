@@ -1129,20 +1129,33 @@ body:has(.library-shell) > div > main {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	gap: 0.7rem;
+	gap: 0.25rem;
 	padding: 0.55rem 1rem;
 	border-bottom: 1px solid var(--border);
 }
 .song-dialog-title {
 	display: flex;
 	align-items: center;
-	gap: 0.35rem;
+	flex: 1 1 0;
+	gap: 0.15rem;
+	width: 0;
 	min-width: 0;
 }
 .song-dialog-title strong {
+	flex: 1 1 0;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.song-dialog-header > .actions {
+	flex: 0 0 auto;
+	flex-wrap: nowrap;
+	gap: 0.15rem;
+}
+.song-dialog-header .icon-button {
+	width: 2.1rem;
+	height: 2.1rem;
 }
 .song-dialog-body {
 	flex: 1;
@@ -1230,7 +1243,6 @@ body:has(.library-shell) > div > main {
 	border-radius: 0.65rem;
 	background: var(--surface);
 	box-shadow: 0 12px 35px #0003;
-	overflow-x: auto;
 }
 .viewer-original-reset {
 	width: 100%;
@@ -1240,17 +1252,18 @@ body:has(.library-shell) > div > main {
 	color: var(--ink);
 	font-weight: 700;
 }
+.viewer-tone-track {
+	min-width: 0;
+}
 .viewer-tone-popover input[type='range'] {
 	width: 100%;
-	min-width: 26rem;
 	margin: 0 0 0.15rem;
 	accent-color: var(--accent);
 }
 .viewer-tone-scale {
 	display: grid;
-	grid-template-columns: repeat(12, minmax(2.1rem, 1fr));
+	grid-template-columns: repeat(12, minmax(0, 1fr));
 	gap: 0.1rem;
-	min-width: 26rem;
 }
 .viewer-tone-option {
 	display: grid;
@@ -1263,7 +1276,7 @@ body:has(.library-shell) > div > main {
 	border-radius: 0.3rem;
 	background: transparent;
 	color: var(--ink);
-	font-size: 0.67rem;
+	font-size: 0.62rem;
 	white-space: nowrap;
 }
 .viewer-tone-scale .viewer-tone-value {
@@ -1692,6 +1705,13 @@ body:has(.library-shell) > div > main {
 		inset: 0;
 		border-radius: 0;
 	}
+	.song-dialog-header {
+		padding: 0.4rem 0.45rem;
+	}
+	.song-dialog-header .icon-button {
+		width: 2rem;
+		height: 2rem;
+	}
 	.song-dialog-body {
 		padding: 0.65rem;
 	}
@@ -1707,6 +1727,42 @@ body:has(.library-shell) > div > main {
 	}
 	.library-results-heading .muted {
 		font-size: 0.85rem;
+	}
+}
+@media (max-width: 600px) {
+	.viewer-tone-popover {
+		max-height: min(70vh, 30rem);
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+	.viewer-tone-track {
+		display: grid;
+		grid-template-columns: 1.8rem minmax(0, 1fr);
+		gap: 0.5rem;
+	}
+	.viewer-tone-popover input[type='range'] {
+		width: 1.8rem;
+		min-width: 0;
+		height: 22.8rem;
+		margin: 0;
+		writing-mode: vertical-lr;
+		direction: rtl;
+	}
+	.viewer-tone-scale {
+		display: flex;
+		flex-direction: column-reverse;
+		gap: 0;
+	}
+	.viewer-tone-option {
+		display: flex;
+		align-items: center;
+		flex: 0 0 1.9rem;
+		justify-content: space-between;
+	}
+	.viewer-tone-scale .viewer-tone-value {
+		width: auto;
+		flex: 1;
+		text-align: left;
 	}
 }
 @media (hover: none) {

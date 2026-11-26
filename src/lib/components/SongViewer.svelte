@@ -251,41 +251,43 @@
 								<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
 									{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
 								</button>
-								<input
-									type="range"
-									min="-5"
-									max="6"
-									step="1"
-									bind:value={semitones}
-									aria-label={t($locale, 'transpose')}
-								/>
-								<div class="viewer-tone-scale">
-									{#each tones as tone (tone.offset)}
-										<div class="viewer-tone-option">
-											<button
-												type="button"
-												class="viewer-tone-value"
-												class:original={tone.offset === 0}
-												class:active={tone.offset === semitones}
-												title={tone.label}
-												aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
-												onclick={() => (semitones = tone.offset)}
-											>
-												{tone.label}
-											</button>
-											<button
-												type="button"
-												class="viewer-tone-pin"
-												class:active={isTonePinned(tone.offset)}
-												disabled={pinBusy}
-												aria-label={`${t($locale, isTonePinned(tone.offset) ? 'unpinSetting' : 'pinSetting')}: ${tone.label}`}
-												aria-pressed={isTonePinned(tone.offset)}
-												onclick={() => toggleTonePin(tone.offset)}
-											>
-												<Icon name="pin" size={13} />
-											</button>
-										</div>
-									{/each}
+								<div class="viewer-tone-track">
+									<input
+										type="range"
+										min="-5"
+										max="6"
+										step="1"
+										bind:value={semitones}
+										aria-label={t($locale, 'transpose')}
+									/>
+									<div class="viewer-tone-scale">
+										{#each tones as tone (tone.offset)}
+											<div class="viewer-tone-option">
+												<button
+													type="button"
+													class="viewer-tone-value"
+													class:original={tone.offset === 0}
+													class:active={tone.offset === semitones}
+													title={tone.label}
+													aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
+													onclick={() => (semitones = tone.offset)}
+												>
+													{tone.label}
+												</button>
+												<button
+													type="button"
+													class="viewer-tone-pin"
+													class:active={isTonePinned(tone.offset)}
+													disabled={pinBusy}
+													aria-label={`${t($locale, isTonePinned(tone.offset) ? 'unpinSetting' : 'pinSetting')}: ${tone.label}`}
+													aria-pressed={isTonePinned(tone.offset)}
+													onclick={() => toggleTonePin(tone.offset)}
+												>
+													<Icon name="pin" size={13} />
+												</button>
+											</div>
+										{/each}
+									</div>
 								</div>
 							</div>
 						{/if}
