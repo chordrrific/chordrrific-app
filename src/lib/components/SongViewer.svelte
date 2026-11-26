@@ -166,7 +166,9 @@
 							aria-expanded={openMenu === 'transpose'}
 							onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
 						>
-							{toneLabel(currentKey, notation)}
+							<Icon name="tuning-fork" size={22} /><span class="viewer-key-badge">
+								{toneLabel(currentKey, notation)}
+							</span>
 						</button>
 						{#if openMenu === 'transpose'}
 							<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>

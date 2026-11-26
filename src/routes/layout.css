@@ -1186,24 +1186,19 @@ body:has(.library-shell) > div > main {
 	height: 2.5rem;
 	padding: 0;
 }
-.viewer-tone-button {
-	width: 5.5rem;
-	height: 3rem;
-	padding: 0 0.5rem;
-	font-size: 0.8rem;
-	font-weight: 700;
-}
+.viewer-tone-button,
 .viewer-notation-button {
 	position: relative;
-	display: grid;
 	grid-template-areas: 'badge';
-	width: 5.5rem;
-	height: 3rem;
+	width: 4.5rem;
+	height: 2.5rem;
 	padding: 0 0.25rem;
 }
+.viewer-tone-button > *,
 .viewer-notation-button > * {
 	grid-area: badge;
 }
+.viewer-tone-button svg,
 .viewer-notation-button svg {
 	justify-self: center;
 }

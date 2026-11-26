@@ -23,6 +23,7 @@
 			| 'bell'
 			| 'grip'
 			| 'music'
+			| 'tuning-fork'
 			| 'chorus';
 		size?: number;
 	}>();
@@ -92,6 +93,7 @@
 			rx="3"
 			ry="2"
 		/><ellipse cx="17" cy="16" rx="3" ry="2" />
+	{:else if name === 'tuning-fork'}<path d="M8 3v6a4 4 0 0 0 8 0V3M12 13v8" />
 	{:else if name === 'chorus'}<path d="M4 3h12v18H4zM7 7h6M7 10h6M7 13h4" /><path
 			d="m13 17 6-6 2 2-6 6-3 1z"
 		/>{/if}
