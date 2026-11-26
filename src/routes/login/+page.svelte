@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	let email = $state('');
 	let password = $state('');
 	let message = $state('');
@@ -28,7 +29,16 @@
 <section class="auth-card">
 	<h1>{t($locale, 'privateLibrary')}</h1>
 	<p>{t($locale, 'intro')}</p>
-	<form onsubmit={submit}>
+	<form
+		onsubmit={submit}
+		use:keyboardShortcuts={{
+			onCancel: () => {
+				email = '';
+				password = '';
+				message = '';
+			}
+		}}
+	>
 		<label>
 			{t($locale, 'email')}<input
 				type="email"

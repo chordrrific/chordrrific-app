@@ -4,6 +4,7 @@
 	import { collectionSongIds, moved } from '#lib/client/catalog.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import type { Collection, Song } from '#lib/client/types.js';
 
 	let collections = $state<Collection[]>([]);
@@ -69,7 +70,7 @@
 <svelte:head><title>{t($locale, 'collections')} · Chordrrific</title></svelte:head>
 <h1>{t($locale, 'collections')}</h1>
 <section class="card" style="margin-bottom:1rem">
-	<form class="toolbar" onsubmit={create}>
+	<form class="toolbar" onsubmit={create} use:keyboardShortcuts={{ onCancel: () => (name = '') }}>
 		<label>
 			{t($locale, 'newCollection')}<input bind:value={name} maxlength="100" required />
 		</label><button class="primary">{t($locale, 'create')}</button>
@@ -84,6 +85,10 @@
 				{#if editingId === collection.id}<input
 						aria-label={t($locale, 'name')}
 						bind:value={editingName}
+						use:keyboardShortcuts={{
+							onSave: rename,
+							onCancel: () => (editingId = null)
+						}}
 					/><button onclick={rename}>{t($locale, 'save')}</button>
 				{:else}<h2>{collection.name}</h2>
 					<button

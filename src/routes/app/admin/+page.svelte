@@ -3,6 +3,7 @@
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import type { User } from '#lib/client/types.js';
 	let users = $state<User[]>([]);
 	let email = $state('');
@@ -70,7 +71,16 @@
 <div class="grid-two">
 	<section class="card">
 		<h2>{t($locale, 'newUser')}</h2>
-		<form onsubmit={create}>
+		<form
+			onsubmit={create}
+			use:keyboardShortcuts={{
+				onCancel: () => {
+					email = '';
+					password = '';
+					isAdmin = false;
+				}
+			}}
+		>
 			<label>
 				{t($locale, 'email')}<input type="email" autocomplete="off" bind:value={email} required />
 			</label>
@@ -115,7 +125,15 @@
 					</div>
 				</li>{/each}
 		</ul>
-		{#if resetId}<form onsubmit={changePassword}>
+		{#if resetId}<form
+				onsubmit={changePassword}
+				use:keyboardShortcuts={{
+					onCancel: () => {
+						resetId = null;
+						resetPassword = '';
+					}
+				}}
+			>
 				<label>
 					{t($locale, 'newPassword')}<input
 						type="password"

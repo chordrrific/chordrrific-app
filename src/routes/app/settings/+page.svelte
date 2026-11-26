@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let message = $state('');
@@ -22,7 +23,16 @@
 <svelte:head><title>{t($locale, 'settings')} · Chordrrific</title></svelte:head>
 <section class="card" style="max-width:500px">
 	<h1>{t($locale, 'settings')}</h1>
-	<form onsubmit={submit}>
+	<form
+		onsubmit={submit}
+		use:keyboardShortcuts={{
+			onCancel: () => {
+				currentPassword = '';
+				newPassword = '';
+				message = '';
+			}
+		}}
+	>
 		<label>
 			{t($locale, 'currentPassword')}<input
 				type="password"

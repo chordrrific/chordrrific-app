@@ -25,6 +25,7 @@
 	import { formatChordPro } from '#lib/client/chordpro-language.js';
 	import { notify, notifyTransient } from '#lib/client/notifications.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 	import type { Collection, Song } from '#lib/client/types.js';
@@ -270,7 +271,7 @@
 			} else if (pendingSongId) {
 				if (!busy) pendingSongId = null;
 			} else if (membershipKind) membershipKind = null;
-			else if (modalOpen) requestLeaveEditor('close');
+			else if (modalOpen) requestLeaveEditor(modalMode === 'edit' && !creating ? 'view' : 'close');
 			else sidebarOpen = false;
 			return;
 		}
@@ -495,13 +496,19 @@
 		membershipInput = '';
 	}
 	function membershipKeydown(event: KeyboardEvent) {
+		if (event.ctrlKey || event.metaKey) return;
 		if (event.key === ',' || event.key === 'Enter') {
 			event.preventDefault();
 			addMembershipName();
 		}
 	}
 	async function saveMembership() {
-		if (!membershipKind) return;
+		if (
+			!membershipKind ||
+			busy ||
+			(membershipBulk && !membershipNames.length && !membershipInput.trim())
+		)
+			return;
 		if (membershipInput.trim()) addMembershipName();
 		busy = true;
 		try {
@@ -820,7 +827,13 @@
 			</div>
 		</div>
 		<div class="song-dialog-body">
-			{#if modalMode === 'edit'}<form onsubmit={saveSong} class="song-edit-form">
+			{#if modalMode === 'edit'}<form
+					onsubmit={saveSong}
+					class="song-edit-form"
+					use:keyboardShortcuts={{
+						onCancel: () => requestLeaveEditor(creating ? 'close' : 'view')
+					}}
+				>
 					<div class="editor-label">{t($locale, 'content')}</div>
 					<ChordProEditor
 						value={content}
@@ -848,6 +861,12 @@
 	<div
 		class="membership-dialog"
 		role="dialog"
+		tabindex="-1"
+		use:focusOnMount
+		use:keyboardShortcuts={{
+			onSave: () => void saveMembership(),
+			onCancel: () => (membershipKind = null)
+		}}
 		aria-modal="true"
 		aria-label={t($locale, membershipKind === 'tag' ? 'editTags' : 'editCollections')}
 	>
@@ -915,6 +934,10 @@
 		role="alertdialog"
 		tabindex="-1"
 		use:focusOnMount
+		use:keyboardShortcuts={{
+			onSave: () => void saveAndNavigate(),
+			onCancel: () => (pendingSongId = null)
+		}}
 		aria-modal="true"
 		aria-label={t($locale, 'unsavedNavigation')}
 	>

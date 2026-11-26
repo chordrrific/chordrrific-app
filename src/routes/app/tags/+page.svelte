@@ -3,6 +3,7 @@
 	import { request } from '#lib/client/api.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
+	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import type { Tag } from '#lib/client/types.js';
 	let tags = $state<Tag[]>([]);
 	let name = $state('');
@@ -54,7 +55,7 @@
 <svelte:head><title>{t($locale, 'tags')} · Chordrrific</title></svelte:head>
 <h1>{t($locale, 'tags')}</h1>
 <section class="card" style="margin-bottom:1rem">
-	<form class="toolbar" onsubmit={create}>
+	<form class="toolbar" onsubmit={create} use:keyboardShortcuts={{ onCancel: () => (name = '') }}>
 		<label>{t($locale, 'newTag')}<input bind:value={name} maxlength="60" required /></label><button
 			class="primary"
 		>
@@ -69,6 +70,10 @@
 				{#if editingId === tag.id}<input
 						aria-label={t($locale, 'name')}
 						bind:value={editingName}
+						use:keyboardShortcuts={{
+							onSave: rename,
+							onCancel: () => (editingId = null)
+						}}
 					/><button onclick={rename}>{t($locale, 'save')}</button>
 				{:else}<span>{tag.name}</span><button
 						onclick={() => {
