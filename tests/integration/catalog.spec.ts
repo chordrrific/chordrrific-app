@@ -2,6 +2,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { db } from '../../src/lib/server/db';
 import { createUser, deleteUser, updateUser } from '../../src/lib/server/users';
 import {
+	createNotification,
+	deleteNotification,
+	listNotifications,
+	markNotificationRead
+} from '../../src/lib/server/notifications';
+import {
 	createCollection,
 	createSong,
 	createTag,
@@ -88,5 +94,32 @@ describe('SQLite integration', () => {
 		await updateUser(first.id, { isAdmin: false });
 		await deleteUser(first.id);
 		expect((await db.user.findUnique({ where: { id: second.id } }))?.isAdmin).toBe(true);
+	});
+
+	it('keeps notifications private, marks them read, deletes them and cascades with the user', async () => {
+		const owner = await createUser({
+			email: 'alerts@example.com',
+			password: 'long-test-password-a'
+		});
+		const other = await createUser({
+			email: 'other-alerts@example.com',
+			password: 'long-test-password-b'
+		});
+		const entry = await createNotification(owner.id, {
+			kind: 'success',
+			title: 'Imported',
+			body: 'One song'
+		});
+		expect((await listNotifications(owner.id)).map((item) => item.id)).toEqual([entry.id]);
+		expect(await listNotifications(other.id)).toEqual([]);
+		await expect(markNotificationRead(other.id, entry.id)).rejects.toMatchObject({ status: 404 });
+		await expect(deleteNotification(other.id, entry.id)).rejects.toMatchObject({ status: 404 });
+		expect((await markNotificationRead(owner.id, entry.id)).readAt).not.toBeNull();
+		await deleteNotification(owner.id, entry.id);
+		expect(await listNotifications(owner.id)).toEqual([]);
+		await createNotification(owner.id, { kind: 'error', title: 'Failed', body: 'Bad file' });
+		await deleteUser(owner.id);
+		expect(await db.notification.count({ where: { ownerId: owner.id } })).toBe(0);
+		await deleteUser(other.id);
 	});
 });
