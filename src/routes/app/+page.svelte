@@ -801,7 +801,9 @@
 					aria-label={t($locale, 'previousSong')}
 				>
 					<Icon name="left" />
-				</button><strong>{creating ? t($locale, 'newSong') : modalSong?.title}</strong><button
+				</button><strong title={creating ? t($locale, 'newSong') : modalSong?.title}>
+					{creating ? t($locale, 'newSong') : modalSong?.title}
+				</strong><button
 					class="icon-button"
 					disabled={creating || modalIndex < 0 || modalIndex >= visibleSongs.length - 1}
 					onclick={() => navigateSong(1)}
@@ -827,7 +829,7 @@
 				</button>
 			</div>
 		</div>
-		<div class="song-dialog-body">
+		<div class="song-dialog-body" class:viewer-mode={modalMode === 'view'}>
 			{#if modalMode === 'edit'}<form
 					onsubmit={saveSong}
 					class="song-edit-form"

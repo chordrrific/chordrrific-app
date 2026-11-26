@@ -21,7 +21,8 @@
 			| 'upload'
 			| 'check'
 			| 'bell'
-			| 'grip';
+			| 'grip'
+			| 'chorus';
 		size?: number;
 	}>();
 </script>
@@ -83,5 +84,8 @@
 			r="1"
 			fill="currentColor"
 			stroke="none"
+		/>
+	{:else if name === 'chorus'}<path d="M4 3h12v18H4zM7 7h6M7 10h6M7 13h4" /><path
+			d="m13 17 6-6 2 2-6 6-3 1z"
 		/>{/if}
 </svg>

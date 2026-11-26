@@ -1,7 +1,7 @@
 type ChordSheetLibrary = typeof import('chordsheetjs');
 
 export type Notation = 'symbol' | 'solfege' | 'number';
-export type ChorusMode = 'label' | 'expanded';
+export type ChorusMode = 'label' | 'expanded' | 'hidden';
 
 export interface PreviewSegment {
 	chord: string;
@@ -69,6 +69,7 @@ export interface SongPreview {
 	title: string | null;
 	blocks: PreviewBlock[];
 	hasKey: boolean;
+	hasChords: boolean;
 	error: string | null;
 }
 
@@ -236,23 +237,29 @@ function displayBlocks(
 	const choruses = source.filter(
 		(block): block is SectionBlock => block.kind === 'section' && block.section === 'chorus'
 	);
-	return source.map((block): PreviewBlock => {
-		if (block.kind !== 'chorus-reference') return block;
+	return source.flatMap((block): PreviewBlock[] => {
+		if (block.kind !== 'chorus-reference') return [block];
+		const displayMode = referenceModes[block.sourceIndex] ?? mode;
+		if (displayMode === 'hidden') return [];
 		const target = resolveChorus(block, choruses);
-		if (!target) return { kind: 'missing-chorus', label: block.label };
-		if ((referenceModes[block.sourceIndex] ?? mode) === 'label') {
-			return {
-				kind: 'chorus-label',
-				sourceIndex: block.sourceIndex,
-				targetSourceIndex: target.sourceIndex
-			};
+		if (!target) return [{ kind: 'missing-chorus', label: block.label }];
+		if (displayMode === 'label') {
+			return [
+				{
+					kind: 'chorus-label',
+					sourceIndex: block.sourceIndex,
+					targetSourceIndex: target.sourceIndex
+				}
+			];
 		}
-		return {
-			...target,
-			sourceIndex: block.sourceIndex,
-			recalled: true,
-			targetSourceIndex: target.sourceIndex
-		};
+		return [
+			{
+				...target,
+				sourceIndex: block.sourceIndex,
+				recalled: true,
+				targetSourceIndex: target.sourceIndex
+			}
+		];
 	});
 }
 
@@ -266,9 +273,13 @@ export function renderSongPreview(
 	referenceModes: Readonly<Record<number, ChorusMode>> = {}
 ): SongPreview {
 	let hasKey = false;
+	let hasChords = false;
 	try {
 		let song = new library.ChordProParser().parse(content);
 		hasKey = Boolean(song.key);
+		hasChords = song.lines.some((line) =>
+			line.items.some((item) => item instanceof library.ChordLyricsPair && Boolean(item.chords))
+		);
 		song = song.transpose(semitones);
 		if (!hasKey && notation === 'number') {
 			throw new Error('Nashville notation requires {key: ...}.');
@@ -293,6 +304,7 @@ export function renderSongPreview(
 			title: song.getSingleMetadataValue('title'),
 			blocks: displayBlocks(collectBlocks(library, song, bisDisplay), chorusMode, referenceModes),
 			hasKey,
+			hasChords,
 			error: null
 		};
 	} catch (cause) {
@@ -300,6 +312,7 @@ export function renderSongPreview(
 			title: null,
 			blocks: [],
 			hasKey,
+			hasChords,
 			error: cause instanceof Error ? cause.message : String(cause)
 		};
 	}

@@ -5,7 +5,8 @@ const storageKey = 'chordrrific-chorus-mode';
 export const chorusMode = writable<ChorusMode>('label');
 
 export function initChorusMode(): void {
-	chorusMode.set(localStorage.getItem(storageKey) === 'expanded' ? 'expanded' : 'label');
+	const saved = localStorage.getItem(storageKey);
+	chorusMode.set(saved === 'expanded' || saved === 'hidden' ? saved : 'label');
 }
 
 export function setChorusMode(value: ChorusMode): void {

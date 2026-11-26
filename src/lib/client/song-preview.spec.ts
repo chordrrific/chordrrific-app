@@ -45,7 +45,19 @@ describe('song preview', () => {
 		const preview = renderSongPreview(library, '[C]Do [F#]Fa [Bb]Si', 'solfege', 0);
 		expect(preview.error).toBeNull();
 		expect(preview.hasKey).toBe(false);
+		expect(preview.hasChords).toBe(true);
 		expect(chords(sections(preview)[0])).toEqual(['Do', 'Fa#', 'Sib']);
+	});
+	it('identifies a song with no chords even when it has a key directive', () => {
+		const preview = renderSongPreview(
+			library,
+			'{title: Solo letra}\n{key: C}\nUna estrofa',
+			'symbol',
+			0
+		);
+		expect(preview.error).toBeNull();
+		expect(preview.hasKey).toBe(true);
+		expect(preview.hasChords).toBe(false);
 	});
 
 	it('converts solfege source chords to symbols without a key', () => {
@@ -87,6 +99,14 @@ describe('song preview', () => {
 		if (original.kind !== 'section' || reference.kind !== 'chorus-label') return;
 		expect(reference.targetSourceIndex).toBe(original.sourceIndex);
 		expect(lyrics(sections(preview)[0])).toBe('Uno');
+	});
+	it('hides chorus references without changing the chorus content', () => {
+		const content =
+			'{title: Test}\n{start_of_chorus}\n[C]Uno\n{end_of_chorus}\n{chorus}\n{chorus: Missing}';
+		const preview = renderSongPreview(library, content, 'symbol', 0, 'hidden');
+		expect(preview.error).toBeNull();
+		expect(preview.blocks.map((block) => block.kind)).toEqual(['section']);
+		expect(chords(sections(preview)[0])).toEqual(['C']);
 	});
 
 	it('expands a chorus reference visually and transposes its chords', () => {

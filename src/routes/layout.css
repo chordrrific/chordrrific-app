@@ -1150,11 +1150,77 @@ body:has(.library-shell) > div > main {
 	min-height: 0;
 	padding: 1rem;
 }
+.song-dialog-body.viewer-mode {
+	overflow: hidden;
+	padding: 0;
+}
+.song-viewer {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+.viewer-controls {
+	position: relative;
+	z-index: 3;
+	flex: none;
+	padding: 0.55rem 1rem;
+	border-bottom: 1px solid var(--border);
+	background: var(--surface);
+}
+.viewer-controls .toolbar {
+	align-items: center;
+	margin-bottom: 0;
+}
+.viewer-controls .toolbar > * {
+	flex: none;
+	min-width: 0;
+}
+.viewer-chorus-control {
+	position: relative;
+}
+.viewer-control-button {
+	display: grid;
+	place-items: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+}
+.viewer-control-menu {
+	position: absolute;
+	top: calc(100% + 0.4rem);
+	right: 0;
+	z-index: 4;
+	display: grid;
+	min-width: 10rem;
+	padding: 0.35rem;
+	border: 1px solid var(--border);
+	border-radius: 0.65rem;
+	background: var(--surface);
+	box-shadow: 0 12px 35px #0003;
+}
+.viewer-control-menu button {
+	width: 100%;
+	padding: 0.55rem 0.7rem;
+	border: 0;
+	background: transparent;
+	color: var(--ink);
+	text-align: left;
+}
+.viewer-control-menu button:hover,
+.viewer-control-menu button.active {
+	background: var(--soft);
+}
 .song-dialog-body .viewer {
 	max-width: 100%;
 	min-height: 100%;
 	border: 0;
 	padding: 0.4rem;
+}
+.song-dialog-body.viewer-mode .viewer {
+	flex: 1;
+	min-height: 0;
+	padding: 1rem;
 }
 .song-edit-form {
 	display: grid;
