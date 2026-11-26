@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { get } from 'svelte/store';
 	import { preventChordOverlap } from '#lib/client/chord-layout.js';
-	import { chorusMode, initChorusMode, setChorusMode } from '#lib/client/chorus-preference.js';
+	import { chorusMode, initChorusMode } from '#lib/client/chorus-preference.js';
 	import { generalToneOffset, generalViewerSettings } from '#lib/client/viewer-defaults.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
@@ -34,6 +35,7 @@
 	const viewerId = $props.id();
 	let notation = $state<Notation>(generalViewerSettings.notation);
 	let notationInitialized = $state(false);
+	let chorusDisplay = $state<ChorusMode>('label');
 	let semitones = $state(0);
 	let toneInitialized = $state(false);
 	let pinBusy = $state(false);
@@ -43,7 +45,7 @@
 	});
 	let library = $state.raw<typeof import('chordsheetjs') | null>(null);
 	let loadError = $state<string | null>(null);
-	let openMenu = $state<'transpose' | 'chorus' | null>(null);
+	let openMenu = $state<'transpose' | 'notation' | 'chorus' | null>(null);
 	const notationLabels = {
 		symbol: 'letters',
 		solfege: 'solfege',
@@ -54,6 +56,7 @@
 
 	onMount(() => {
 		initChorusMode();
+		chorusDisplay = song.pinnedChorusMode ?? get(chorusMode);
 		void import('chordsheetjs')
 			.then((chordSheet) => {
 				library = chordSheet;
@@ -73,7 +76,7 @@
 					content,
 					notation,
 					semitones,
-					song.pinnedChorusMode ?? $chorusMode,
+					chorusDisplay,
 					defaultBisDisplayConfig,
 					activeReferenceModes
 				)
@@ -84,6 +87,11 @@
 	let originalKey = $derived(preview?.originalKey ?? null);
 	let currentKey = $derived(preview?.currentKey ?? null);
 	let tones = $derived(originalKey ? chromaticTones(originalKey, notation) : []);
+	function isTonePinned(offset: number): boolean {
+		return (
+			originalKey !== null && song.pinnedTone === transposeSongKey(originalKey, offset).pitchClass
+		);
+	}
 	$effect(() => {
 		if (!notationInitialized) {
 			notation = song.pinnedNotation ?? generalViewerSettings.notation;
@@ -113,59 +121,44 @@
 		}
 	}
 
-	async function toggleTonePin() {
-		if (!originalKey || !currentKey) return;
-		const unpinning = song.pinnedTone !== null;
-		if (await savePin({ pinnedTone: unpinning ? null : currentKey.pitchClass })) {
-			if (unpinning) semitones = generalToneOffset(originalKey);
-		}
-	}
-
-	async function selectTone(offset: number) {
-		if (pinBusy) return;
+	async function toggleTonePin(offset: number) {
+		if (!originalKey) return;
+		const target = transposeSongKey(originalKey, offset).pitchClass;
+		const unpinning = song.pinnedTone === target;
 		const previous = semitones;
-		semitones = offset;
-		if (song.pinnedTone !== null && originalKey) {
-			const target = transposeSongKey(originalKey, offset).pitchClass;
-			if (!(await savePin({ pinnedTone: target }))) semitones = previous;
+		if (!unpinning) semitones = offset;
+		if (!(await savePin({ pinnedTone: unpinning ? null : target })) && semitones === offset) {
+			semitones = previous;
 		}
 	}
 
-	async function commitSliderTone() {
-		if (song.pinnedTone === null || !originalKey) return;
-		const target = transposeSongKey(originalKey, semitones).pitchClass;
-		if (!(await savePin({ pinnedTone: target }))) {
-			semitones = offsetForTone(originalKey, song.pinnedTone);
-		}
-	}
-
-	async function toggleNotationPin() {
-		const unpinning = song.pinnedNotation !== null;
-		if (await savePin({ pinnedNotation: unpinning ? null : notation })) {
-			if (unpinning) notation = generalViewerSettings.notation;
-		}
-	}
-
-	async function toggleChorusPin(mode: ChorusMode) {
-		await savePin({ pinnedChorusMode: song.pinnedChorusMode === mode ? null : mode });
-	}
-
-	async function cycleNotation() {
-		if (pinBusy) return;
+	async function toggleNotationPin(mode: Notation) {
+		const unpinning = song.pinnedNotation === mode;
 		const previous = notation;
-		const next = (viewerNotations.indexOf(notation) + 1) % viewerNotations.length;
-		notation = viewerNotations[next];
-		openMenu = null;
-		if (song.pinnedNotation !== null && !(await savePin({ pinnedNotation: notation }))) {
+		if (!unpinning) notation = mode;
+		if (!(await savePin({ pinnedNotation: unpinning ? null : mode })) && notation === mode) {
 			notation = previous;
 		}
 	}
 
-	async function chooseChorusMode(mode: ChorusMode) {
-		referenceModes = { content, modes: {} };
+	async function toggleChorusPin(mode: ChorusMode) {
+		const unpinning = song.pinnedChorusMode === mode;
+		const previous = chorusDisplay;
+		if (!unpinning) chorusDisplay = mode;
+		if (!(await savePin({ pinnedChorusMode: unpinning ? null : mode })) && chorusDisplay === mode) {
+			chorusDisplay = previous;
+		}
+	}
+
+	function chooseNotation(mode: Notation) {
+		notation = mode;
 		openMenu = null;
-		if (song.pinnedChorusMode !== null) await savePin({ pinnedChorusMode: mode });
-		else setChorusMode(mode);
+	}
+
+	function chooseChorusMode(mode: ChorusMode) {
+		referenceModes = { content, modes: {} };
+		chorusDisplay = mode;
+		openMenu = null;
 	}
 	function closeMenuOutside(event: PointerEvent) {
 		if (
@@ -253,63 +246,45 @@
 								{toneLabel(currentKey, notation)}
 							</span>
 						</button>
-						<button
-							type="button"
-							class="viewer-pin-button"
-							class:active={song.pinnedTone !== null}
-							disabled={pinBusy}
-							aria-label={`${t($locale, song.pinnedTone === null ? 'pinSetting' : 'unpinSetting')}: ${t($locale, 'transpose')}`}
-							aria-pressed={song.pinnedTone !== null}
-							onclick={toggleTonePin}
-						>
-							<Icon name="pin" size={13} />
-						</button>
 						{#if openMenu === 'transpose'}
 							<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
-								<div class="viewer-original-row">
-									<button
-										class="viewer-original-reset"
-										type="button"
-										disabled={pinBusy}
-										onclick={() => selectTone(0)}
-									>
-										{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
-									</button>
-									<button
-										type="button"
-										class="viewer-pin-button viewer-popover-pin"
-										class:active={song.pinnedTone !== null}
-										disabled={pinBusy}
-										aria-label={`${t($locale, song.pinnedTone === null ? 'pinSetting' : 'unpinSetting')}: ${t($locale, 'transpose')}`}
-										aria-pressed={song.pinnedTone !== null}
-										onclick={toggleTonePin}
-									>
-										<Icon name="pin" size={15} />
-									</button>
-								</div>
+								<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
+									{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
+								</button>
 								<input
 									type="range"
 									min="-5"
 									max="6"
 									step="1"
 									bind:value={semitones}
-									disabled={pinBusy}
-									onchange={commitSliderTone}
 									aria-label={t($locale, 'transpose')}
 								/>
 								<div class="viewer-tone-scale">
 									{#each tones as tone (tone.offset)}
-										<button
-											type="button"
-											class:original={tone.offset === 0}
-											class:active={tone.offset === semitones}
-											disabled={pinBusy}
-											title={tone.label}
-											aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
-											onclick={() => selectTone(tone.offset)}
-										>
-											{tone.label}
-										</button>
+										<div class="viewer-tone-option">
+											<button
+												type="button"
+												class="viewer-tone-value"
+												class:original={tone.offset === 0}
+												class:active={tone.offset === semitones}
+												title={tone.label}
+												aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
+												onclick={() => (semitones = tone.offset)}
+											>
+												{tone.label}
+											</button>
+											<button
+												type="button"
+												class="viewer-tone-pin"
+												class:active={isTonePinned(tone.offset)}
+												disabled={pinBusy}
+												aria-label={`${t($locale, isTonePinned(tone.offset) ? 'unpinSetting' : 'pinSetting')}: ${tone.label}`}
+												aria-pressed={isTonePinned(tone.offset)}
+												onclick={() => toggleTonePin(tone.offset)}
+											>
+												<Icon name="pin" size={13} />
+											</button>
+										</div>
 									{/each}
 								</div>
 							</div>
@@ -320,26 +295,49 @@
 							type="button"
 							class="viewer-control-button viewer-notation-button"
 							class:pinned={song.pinnedNotation !== null}
-							disabled={pinBusy}
 							aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
 							title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
-							onclick={cycleNotation}
+							aria-expanded={openMenu === 'notation'}
+							onclick={() => (openMenu = openMenu === 'notation' ? null : 'notation')}
 						>
 							<Icon name="music" size={22} /><span class="viewer-key-badge">
 								{toneLabel(originalKey, notation)}
 							</span>
 						</button>
-						<button
-							type="button"
-							class="viewer-pin-button"
-							class:active={song.pinnedNotation !== null}
-							disabled={pinBusy}
-							aria-label={`${t($locale, song.pinnedNotation === null ? 'pinSetting' : 'unpinSetting')}: ${t($locale, 'notation')}`}
-							aria-pressed={song.pinnedNotation !== null}
-							onclick={toggleNotationPin}
-						>
-							<Icon name="pin" size={13} />
-						</button>
+						{#if openMenu === 'notation'}
+							<div
+								class="viewer-control-menu"
+								role="menu"
+								tabindex="-1"
+								aria-label={t($locale, 'notation')}
+							>
+								{#each viewerNotations as mode (mode)}
+									<div class="viewer-option-row" role="none">
+										<button
+											type="button"
+											role="menuitemradio"
+											aria-checked={notation === mode}
+											class:active={notation === mode}
+											onclick={() => chooseNotation(mode)}
+										>
+											{t($locale, notationLabels[mode])}
+										</button>
+										<button
+											type="button"
+											class="viewer-option-pin"
+											class:active={song.pinnedNotation === mode}
+											role="menuitemcheckbox"
+											aria-checked={song.pinnedNotation === mode}
+											disabled={pinBusy}
+											aria-label={`${t($locale, song.pinnedNotation === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, notationLabels[mode])}`}
+											onclick={() => toggleNotationPin(mode)}
+										>
+											<Icon name="pin" size={14} />
+										</button>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				{/if}
 				{#if hasChorusReferences}
@@ -362,13 +360,12 @@
 								aria-label={t($locale, 'chorusDisplay')}
 							>
 								{#each chorusModes as mode (mode)}
-									<div class="viewer-chorus-option" role="none">
+									<div class="viewer-option-row" role="none">
 										<button
 											type="button"
 											role="menuitemradio"
-											aria-checked={(song.pinnedChorusMode ?? $chorusMode) === mode}
-											class:active={(song.pinnedChorusMode ?? $chorusMode) === mode}
-											disabled={pinBusy}
+											aria-checked={chorusDisplay === mode}
+											class:active={chorusDisplay === mode}
 											onclick={() => chooseChorusMode(mode)}
 										>
 											{t(
@@ -382,11 +379,12 @@
 										</button>
 										<button
 											type="button"
-											class="viewer-pin-button viewer-option-pin"
+											class="viewer-option-pin"
 											class:active={song.pinnedChorusMode === mode}
+											role="menuitemcheckbox"
+											aria-checked={song.pinnedChorusMode === mode}
 											disabled={pinBusy}
 											aria-label={`${t($locale, song.pinnedChorusMode === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, mode === 'label' ? 'chorusOptionLabel' : mode === 'expanded' ? 'chorusExpanded' : 'chorusHidden')}`}
-											aria-pressed={song.pinnedChorusMode === mode}
 											onclick={() => toggleChorusPin(mode)}
 										>
 											<Icon name="pin" size={14} />

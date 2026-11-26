@@ -1189,26 +1189,6 @@ body:has(.library-shell) > div > main {
 .viewer-control-button.pinned {
 	border-color: var(--accent);
 }
-.viewer-pin-button {
-	position: absolute;
-	top: -0.38rem;
-	left: -0.38rem;
-	z-index: 1;
-	display: grid;
-	place-items: center;
-	width: 1.45rem;
-	height: 1.45rem;
-	padding: 0;
-	border: 0;
-	border-radius: 50%;
-	background: var(--surface);
-	color: var(--muted);
-}
-.viewer-pin-button:hover,
-.viewer-pin-button.active {
-	background: var(--soft);
-	color: var(--accent);
-}
 .viewer-tone-button,
 .viewer-notation-button {
 	position: relative;
@@ -1250,35 +1230,31 @@ body:has(.library-shell) > div > main {
 	border-radius: 0.65rem;
 	background: var(--surface);
 	box-shadow: 0 12px 35px #0003;
+	overflow-x: auto;
 }
 .viewer-original-reset {
 	width: 100%;
+	margin-bottom: 0.3rem;
 	border: 0;
 	background: transparent;
 	color: var(--ink);
 	font-weight: 700;
 }
-.viewer-original-row {
-	display: flex;
-	align-items: center;
-	margin-bottom: 0.5rem;
-}
-.viewer-original-row .viewer-original-reset {
-	flex: 1;
-}
-.viewer-popover-pin {
-	position: static;
-	flex: none;
-}
 .viewer-tone-popover input[type='range'] {
 	width: 100%;
-	margin: 0 0 0.5rem;
+	min-width: 26rem;
+	margin: 0 0 0.15rem;
 	accent-color: var(--accent);
 }
 .viewer-tone-scale {
 	display: grid;
-	grid-template-columns: repeat(12, minmax(0, 1fr));
+	grid-template-columns: repeat(12, minmax(2.1rem, 1fr));
 	gap: 0.1rem;
+	min-width: 26rem;
+}
+.viewer-tone-option {
+	display: grid;
+	justify-items: center;
 }
 .viewer-tone-scale button {
 	min-width: 0;
@@ -1290,11 +1266,27 @@ body:has(.library-shell) > div > main {
 	font-size: 0.67rem;
 	white-space: nowrap;
 }
-.viewer-tone-scale button.original {
+.viewer-tone-scale .viewer-tone-value {
+	width: 100%;
+}
+.viewer-tone-scale .viewer-tone-value.original {
 	border-color: var(--border);
 	font-weight: 800;
 }
-.viewer-tone-scale button.active {
+.viewer-tone-scale .viewer-tone-value.active {
+	background: var(--soft);
+	color: var(--accent);
+}
+.viewer-tone-scale .viewer-tone-pin {
+	display: grid;
+	place-items: center;
+	width: 1.7rem;
+	height: 1.7rem;
+	padding: 0;
+	color: var(--muted);
+}
+.viewer-tone-scale .viewer-tone-pin.active,
+.viewer-tone-scale .viewer-tone-pin:hover {
 	background: var(--soft);
 	color: var(--accent);
 }
@@ -1323,15 +1315,19 @@ body:has(.library-shell) > div > main {
 .viewer-control-menu button.active {
 	background: var(--soft);
 }
-.viewer-chorus-option {
+.viewer-notation-control .viewer-control-menu {
+	min-width: 12rem;
+}
+.viewer-option-row {
 	display: flex;
 	align-items: center;
 }
-.viewer-chorus-option > button:first-child {
+.viewer-option-row > button:first-child {
 	flex: 1;
 }
 .viewer-control-menu .viewer-option-pin {
-	position: static;
+	display: grid;
+	place-items: center;
 	flex: none;
 	width: 1.8rem;
 	height: 1.8rem;
