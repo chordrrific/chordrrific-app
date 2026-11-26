@@ -3,6 +3,7 @@ import { db } from '../../src/lib/server/db';
 import { createUser, deleteUser, updateUser } from '../../src/lib/server/users';
 import {
 	createNotification,
+	deleteAllNotifications,
 	deleteNotification,
 	listNotifications,
 	markNotificationRead
@@ -117,6 +118,16 @@ describe('SQLite integration', () => {
 		expect((await markNotificationRead(owner.id, entry.id)).readAt).not.toBeNull();
 		await deleteNotification(owner.id, entry.id);
 		expect(await listNotifications(owner.id)).toEqual([]);
+		await createNotification(owner.id, { kind: 'error', title: 'Failed', body: 'Bad file' });
+		await createNotification(owner.id, { kind: 'info', title: 'Another', body: '' });
+		const otherEntry = await createNotification(other.id, {
+			kind: 'info',
+			title: 'Private',
+			body: ''
+		});
+		await deleteAllNotifications(owner.id);
+		expect(await listNotifications(owner.id)).toEqual([]);
+		expect((await listNotifications(other.id)).map((item) => item.id)).toEqual([otherEntry.id]);
 		await createNotification(owner.id, { kind: 'error', title: 'Failed', body: 'Bad file' });
 		await deleteUser(owner.id);
 		expect(await db.notification.count({ where: { ownerId: owner.id } })).toBe(0);

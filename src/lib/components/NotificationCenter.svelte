@@ -4,8 +4,9 @@
 		dismissToast,
 		markRead,
 		notifications,
+		removeAllNotifications,
 		removeNotification,
-		toastIds
+		toasts
 	} from '#lib/client/notifications.js';
 	import Icon from './Icon.svelte';
 
@@ -16,12 +17,6 @@
 	}>();
 	let failure = $state('');
 	let unread = $derived($notifications.filter((entry) => !entry.readAt).length);
-	let visibleToasts = $derived(
-		$toastIds.flatMap((id) => {
-			const entry = $notifications.find((item) => item.id === id);
-			return entry ? [entry] : [];
-		})
-	);
 	async function act(action: () => Promise<void>) {
 		failure = '';
 		onClose();
@@ -30,6 +25,11 @@
 		} catch (cause) {
 			failure = cause instanceof Error ? cause.message : String(cause);
 		}
+	}
+	function clearAll() {
+		onClose();
+		if (!$notifications.length || !confirm(t($locale, 'confirmDeleteAllNotifications'))) return;
+		void act(removeAllNotifications);
 	}
 	function date(value: string): string {
 		return new Intl.DateTimeFormat($locale, { dateStyle: 'short', timeStyle: 'short' }).format(
@@ -51,7 +51,19 @@
 		{#if unread > 0}<span class="notification-badge">{unread > 99 ? '99+' : unread}</span>{/if}
 	</button>
 	{#if open}<div class="notification-panel">
-			<h2>{t($locale, 'notifications')}</h2>
+			<div class="notification-panel-header">
+				<h2>{t($locale, 'notifications')}</h2>
+				<button
+					type="button"
+					class="icon-button danger"
+					disabled={!$notifications.length}
+					onclick={clearAll}
+					aria-label={t($locale, 'deleteAllNotifications')}
+					title={t($locale, 'deleteAllNotifications')}
+				>
+					<Icon name="trash" size={18} />
+				</button>
+			</div>
 			{#if !$notifications.length}<p class="muted">{t($locale, 'noNotifications')}</p>{/if}
 			{#if failure}<p class="error" role="alert">{failure}</p>{/if}
 			<ul>
@@ -81,7 +93,7 @@
 </div>
 
 <div class="toast-stack" aria-live="polite">
-	{#each visibleToasts as entry (entry.id)}
+	{#each $toasts as entry (entry.id)}
 		<div
 			class="notification-toast"
 			class:error-kind={entry.kind === 'error'}

@@ -31,3 +31,7 @@ export async function deleteNotification(ownerId: string, id: string) {
 	const result = await db.notification.deleteMany({ where: { id, ownerId } });
 	if (result.count === 0) error(404, 'Notification not found');
 }
+
+export async function deleteAllNotifications(ownerId: string) {
+	await db.notification.deleteMany({ where: { ownerId } });
+}

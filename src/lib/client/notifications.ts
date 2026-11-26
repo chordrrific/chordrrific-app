@@ -12,7 +12,7 @@ export interface AppNotification {
 }
 
 export const notifications = writable<AppNotification[]>([]);
-export const toastIds = writable<string[]>([]);
+export const toasts = writable<AppNotification[]>([]);
 let activeUser: string | null = null;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -20,7 +20,7 @@ export async function initializeNotifications(userId: string | null): Promise<vo
 	if (activeUser === userId) return;
 	activeUser = userId;
 	notifications.set([]);
-	toastIds.set([]);
+	toasts.set([]);
 	for (const timer of timers.values()) clearTimeout(timer);
 	timers.clear();
 	if (!userId) return;
@@ -39,19 +39,30 @@ export async function initializeNotifications(userId: string | null): Promise<vo
 }
 
 export function dismissToast(id: string): void {
-	toastIds.update((current) => current.filter((item) => item !== id));
+	toasts.update((current) => current.filter((item) => item.id !== id));
 	const timer = timers.get(id);
 	if (timer) clearTimeout(timer);
 	timers.delete(id);
 }
 
 function showToast(entry: AppNotification): void {
-	toastIds.update((current) => [entry.id, ...current].slice(0, 4));
+	toasts.update((current) => [entry, ...current].slice(0, 4));
 	if (entry.kind !== 'error')
 		timers.set(
 			entry.id,
 			setTimeout(() => dismissToast(entry.id), 6000)
 		);
+}
+
+export function notifyTransient(kind: NotificationKind, title: string, body = ''): void {
+	showToast({
+		id: `local-${crypto.randomUUID()}`,
+		kind,
+		title,
+		body,
+		readAt: null,
+		createdAt: new Date().toISOString()
+	});
 }
 
 export async function notify(kind: NotificationKind, title: string, body = ''): Promise<void> {
@@ -85,4 +96,12 @@ export async function removeNotification(id: string): Promise<void> {
 	if (!id.startsWith('local-')) await request(`/api/notifications/${id}`, 'DELETE');
 	dismissToast(id);
 	notifications.update((current) => current.filter((entry) => entry.id !== id));
+}
+
+export async function removeAllNotifications(): Promise<void> {
+	await request('/api/notifications', 'DELETE');
+	notifications.set([]);
+	toasts.set([]);
+	for (const timer of timers.values()) clearTimeout(timer);
+	timers.clear();
 }

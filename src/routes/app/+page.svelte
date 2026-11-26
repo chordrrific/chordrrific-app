@@ -11,7 +11,7 @@
 	} from '#lib/client/library.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { formatChordPro } from '#lib/client/chordpro-language.js';
-	import { notify } from '#lib/client/notifications.js';
+	import { notify, notifyTransient } from '#lib/client/notifications.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 	import { chordProFileAccept, importChordProFiles } from '#lib/client/song-import.js';
@@ -289,7 +289,7 @@
 			creating = false;
 			content = song.content;
 			savedContent = song.content;
-			void notify('success', t($locale, 'saved'));
+			notifyTransient('success', t($locale, 'saved'));
 			return true;
 		} catch (cause) {
 			void notify(
@@ -445,7 +445,7 @@
 			membershipKind = null;
 			selectedIds = [];
 			await loadCatalog();
-			void notify('success', t($locale, 'saved'));
+			notifyTransient('success', t($locale, 'saved'));
 		} catch (cause) {
 			void notify(
 				'error',

@@ -139,6 +139,8 @@ const strings = {
 		noNotifications: 'No hay notificaciones.',
 		markAsRead: 'Marcar como leída',
 		deleteNotification: 'Eliminar notificación',
+		deleteAllNotifications: 'Eliminar todas las notificaciones',
+		confirmDeleteAllNotifications: '¿Eliminar definitivamente todas las notificaciones?',
 		unsavedNavigation:
 			'Hay cambios sin guardar en esta canción. ¿Quieres guardarlos antes de pasar a otra?',
 		saveAndNavigate: 'Guardar y cambiar',
@@ -269,6 +271,8 @@ const strings = {
 		noNotifications: 'No notifications.',
 		markAsRead: 'Mark as read',
 		deleteNotification: 'Delete notification',
+		deleteAllNotifications: 'Delete all notifications',
+		confirmDeleteAllNotifications: 'Permanently delete all notifications?',
 		unsavedNavigation: 'This song has unsaved changes. Save them before moving to another song?',
 		saveAndNavigate: 'Save and move',
 		stayEditing: 'Cancel and keep editing',
