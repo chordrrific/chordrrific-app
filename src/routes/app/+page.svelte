@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { request } from '#lib/client/api.js';
 	import { changedMembershipIds } from '#lib/client/catalog.js';
+	import { catalogRevision } from '#lib/client/catalog-state.js';
 	import {
 		cycleFacet,
 		libraryFacets,
@@ -15,7 +16,6 @@
 	import { confirmAction } from '#lib/client/confirmation.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
-	import { chordProFileAccept, importChordProFiles } from '#lib/client/song-import.js';
 	import type { Collection, Song } from '#lib/client/types.js';
 	import SongViewer from '#lib/components/SongViewer.svelte';
 	import ChordProEditor from '#lib/components/ChordProEditor.svelte';
@@ -46,8 +46,6 @@
 	let membershipBulk = $state(false);
 	let membershipOperation = $state<'add' | 'remove'>('add');
 	let busy = $state(false);
-	let importing = $state(false);
-	let fileInput: HTMLInputElement;
 	let touchStart: { x: number; y: number } | null = null;
 	let gestureStart: { x: number; y: number } | null = null;
 	function focusOnMount(node: HTMLElement) {
@@ -89,7 +87,7 @@
 		} catch {
 			pinned = [];
 		}
-		void loadCatalog();
+		return catalogRevision.subscribe(() => void loadCatalog());
 	});
 
 	function chooseFacet(key: FacetKey, value: string | undefined, additive: boolean) {
@@ -241,42 +239,6 @@
 		selectedIds = selectedIds.includes(id)
 			? selectedIds.filter((selectedId) => selectedId !== id)
 			: [...selectedIds, id];
-	}
-	async function importSelected(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const files = Array.from(input.files ?? []);
-		input.value = '';
-		if (!files.length) return;
-		importing = true;
-		try {
-			const results = await importChordProFiles(files, (song) =>
-				request<Song>('/api/songs', 'POST', song)
-			);
-			const imported = results.filter((result) => result.status === 'imported').length;
-			const failed = results.length - imported;
-			if (imported) await loadCatalog();
-			const report = results
-				.map((result) =>
-					result.status === 'imported'
-						? `${result.fileName} → ${result.title}`
-						: `${result.fileName}: ${result.error}`
-				)
-				.join('\n');
-			const body = report.length > 20_000 ? `${report.slice(0, 19_999)}…` : report;
-			await notify(
-				failed ? 'error' : 'success',
-				`${t($locale, 'importedCount')}: ${imported} · ${t($locale, 'failedCount')}: ${failed}`,
-				body
-			);
-		} catch (cause) {
-			void notify(
-				'error',
-				t($locale, 'importSummary'),
-				cause instanceof Error ? cause.message : String(cause)
-			);
-		} finally {
-			importing = false;
-		}
 	}
 	async function persistSong(): Promise<boolean> {
 		busy = true;
@@ -537,55 +499,69 @@
 			<button class="primary" onclick={newSong}>
 				<Icon name="plus" size={18} />{t($locale, 'newSong')}
 			</button>
-			<button disabled={importing} onclick={() => fileInput.click()}>
-				<Icon name="upload" size={18} />{t($locale, importing ? 'importingSongs' : 'importSongs')}
-			</button>
-			<input
-				bind:this={fileInput}
-				type="file"
-				accept={chordProFileAccept}
-				multiple
-				hidden
-				aria-label={t($locale, 'importSongs')}
-				onchange={importSelected}
-			/>
 		</div>
 		<div class="library-results-heading">
 			<h1>{t($locale, 'songs')}</h1>
-			<span class="muted">{visibleSongs.length} {t($locale, 'songCount')}</span>
+			<span class="muted">
+				{visibleSongs.length}{#if filters.length || search.trim()}&nbsp;({t(
+						$locale,
+						'filteredCount'
+					)}){/if}
+			</span>
 		</div>
 		{#if selectedIds.length}<div class="bulk-toolbar">
 				<strong>{selectedIds.length} {t($locale, 'selectedCount')}</strong><button
+					class="bulk-action"
 					onclick={() => openMembership('tag', selectedIds, true)}
+					aria-label={t($locale, 'tags')}
+					title={t($locale, 'tags')}
 				>
-					<Icon name="tag" size={17} />{t($locale, 'tags')}
-				</button><button onclick={() => openMembership('collection', selectedIds, true)}>
-					<Icon name="folder" size={17} />{t($locale, 'collections')}
-				</button><button class="danger" disabled={busy} onclick={() => deleteSongs(selectedIds)}>
-					<Icon name="trash" size={17} />{t($locale, 'delete')}
+					<Icon name="tag" size={17} /><span class="bulk-action-label">{t($locale, 'tags')}</span>
+				</button><button
+					class="bulk-action"
+					onclick={() => openMembership('collection', selectedIds, true)}
+					aria-label={t($locale, 'collections')}
+					title={t($locale, 'collections')}
+				>
+					<Icon name="folder" size={17} /><span class="bulk-action-label">
+						{t($locale, 'collections')}
+					</span>
+				</button><button
+					class="bulk-action danger"
+					disabled={busy}
+					onclick={() => deleteSongs(selectedIds)}
+					aria-label={t($locale, 'delete')}
+					title={t($locale, 'delete')}
+				>
+					<Icon name="trash" size={17} /><span class="bulk-action-label">
+						{t($locale, 'delete')}
+					</span>
 				</button><button
 					class="icon-button"
 					onclick={() => (selectedIds = [])}
 					aria-label={t($locale, 'cancel')}
+					title={t($locale, 'cancel')}
 				>
 					<Icon name="close" size={17} />
 				</button>
 			</div>{/if}
-		{#if visibleSongs.length}<div class="song-grid">
-				{#each visibleSongs as song (song.id)}<SongCard
-						{song}
-						selected={selectedIds.includes(song.id)}
-						onOpen={(event) => cardOpen(song, event)}
-						onSelect={() => toggleSongSelection(song.id)}
-						onEdit={() => openSong(song, 'edit')}
-						onDelete={() => deleteSongs([song.id])}
-						onTags={() => openMembership('tag', [song.id])}
-						onCollections={() => openMembership('collection', [song.id])}
-					/>{/each}
-			</div>
-		{:else}<p class="empty-library">
-				{songs.length ? t($locale, 'noResults') : t($locale, 'noSongs')}
-			</p>{/if}
+		<div class="song-results-scroll">
+			{#if visibleSongs.length}<div class="song-grid">
+					{#each visibleSongs as song (song.id)}<SongCard
+							{song}
+							selected={selectedIds.includes(song.id)}
+							onOpen={(event) => cardOpen(song, event)}
+							onSelect={() => toggleSongSelection(song.id)}
+							onEdit={() => openSong(song, 'edit')}
+							onDelete={() => deleteSongs([song.id])}
+							onTags={() => openMembership('tag', [song.id])}
+							onCollections={() => openMembership('collection', [song.id])}
+						/>{/each}
+				</div>
+			{:else}<p class="empty-library">
+					{songs.length ? t($locale, 'noResults') : t($locale, 'noSongs')}
+				</p>{/if}
+		</div>
 	</section>
 </div>
 

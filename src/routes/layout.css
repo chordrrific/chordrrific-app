@@ -592,16 +592,32 @@ main {
 .mobile-only {
 	display: none;
 }
+/* The app.html wrapper uses display: contents, so its children fill the viewport flex layout. */
+body:has(.library-shell) {
+	display: flex;
+	flex-direction: column;
+	height: 100dvh;
+	overflow: hidden;
+}
+body:has(.library-shell) > div > .site-header {
+	flex: none;
+}
+body:has(.library-shell) > div > main {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
 .library-shell {
 	display: grid;
 	grid-template-columns: minmax(215px, 250px) minmax(0, 1fr);
 	gap: clamp(1rem, 2vw, 2rem);
 	align-items: start;
+	height: 100%;
+	min-height: 0;
 }
 .library-sidebar {
-	position: sticky;
-	top: 5.3rem;
-	max-height: calc(100vh - 6rem);
+	position: relative;
+	height: 100%;
 	overflow-y: auto;
 	padding: 0.7rem;
 	background: var(--surface);
@@ -759,7 +775,12 @@ main {
 	font-weight: 400;
 }
 .library-main {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
 	min-width: 0;
+	min-height: 0;
+	container-type: inline-size;
 }
 .library-toolbar {
 	display: flex;
@@ -829,6 +850,14 @@ main {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
+}
+.song-results-scroll {
+	flex: 1;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: 0.2rem 0.2rem 1rem;
+	overscroll-behavior: contain;
 }
 .song-grid {
 	display: grid;
@@ -1284,6 +1313,30 @@ main {
 }
 .confirmation-dialog::backdrop {
 	background: #091712ae;
+}
+@container (max-width: 620px) {
+	.bulk-toolbar {
+		gap: 0.25rem;
+		padding: 0.4rem 0.5rem;
+	}
+	.bulk-toolbar .bulk-action {
+		justify-content: center;
+		width: 1.9rem;
+		height: 1.9rem;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--ink);
+	}
+	.bulk-toolbar .bulk-action:hover {
+		background: var(--soft);
+	}
+	.bulk-toolbar .bulk-action.danger {
+		color: #b34b4b;
+	}
+	.bulk-action-label {
+		display: none;
+	}
 }
 @media (max-width: 800px) {
 	.mobile-only {

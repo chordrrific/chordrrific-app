@@ -4,6 +4,7 @@ import {
 	type MetadataKey,
 	type SongMetadata
 } from '#lib/core/song-metadata.js';
+import { foldSearchText } from '#lib/core/text-search.js';
 import type { Collection, Song } from './types.js';
 
 export type FacetKey = MetadataKey | 'collection';
@@ -72,10 +73,10 @@ export function visibleLibrarySongs(
 	search: string,
 	collections: readonly Collection[]
 ): Song[] {
-	const term = search.trim().toLocaleLowerCase();
+	const term = foldSearchText(search.trim());
 	const result = songs.filter(
 		(song) =>
-			(!term || song.title.toLocaleLowerCase().includes(term)) &&
+			(!term || foldSearchText(song.title).includes(term)) &&
 			active.every((item) => {
 				const values = songValues(song, item.key);
 				const matches =

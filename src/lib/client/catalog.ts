@@ -1,4 +1,5 @@
 import type { Collection, Song } from './types';
+import { foldSearchText } from '#lib/core/text-search.js';
 
 export function filterSongs(
 	songs: Song[],
@@ -6,10 +7,10 @@ export function filterSongs(
 	tagId: string,
 	collectionId: string
 ): Song[] {
-	const term = search.trim().toLocaleLowerCase();
+	const term = foldSearchText(search.trim());
 	return songs.filter(
 		(song) =>
-			(!term || song.title.toLocaleLowerCase().includes(term)) &&
+			(!term || foldSearchText(song.title).includes(term)) &&
 			(!tagId || song.tags.some((link) => link.tagId === tagId)) &&
 			(!collectionId || song.collections.some((link) => link.collectionId === collectionId))
 	);

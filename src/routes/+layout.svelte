@@ -9,11 +9,16 @@
 	import ConfirmationDialog from '#lib/components/ConfirmationDialog.svelte';
 	import { confirmation, resolveConfirmation } from '#lib/client/confirmation.js';
 	import { initializeNotifications } from '#lib/client/notifications.js';
+	import { refreshCatalog } from '#lib/client/catalog-state.js';
+	import { chordProFileAccept } from '#lib/client/song-import.js';
+	import { importSongsWithReport } from '#lib/client/song-import-flow.js';
 	import './layout.css';
 
 	let { data, children } = $props();
 	let dark = $state(false);
 	let openMenu = $state<'language' | 'notifications' | 'user' | null>(null);
+	let importing = $state(false);
+	let importInput: HTMLInputElement;
 	onMount(() => {
 		initLocale();
 		dark = localStorage.getItem('chordrrific-theme') === 'dark';
@@ -43,6 +48,27 @@
 	function chooseLanguage(value: 'es' | 'en') {
 		setLocale(value);
 		openMenu = null;
+	}
+	function openImportPicker() {
+		openMenu = null;
+		importInput.click();
+	}
+	async function importSelected(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const files = Array.from(input.files ?? []);
+		input.value = '';
+		if (!files.length) return;
+		importing = true;
+		try {
+			const imported = await importSongsWithReport(files, $locale);
+			if (imported) {
+				refreshCatalog();
+				if (window.location.pathname.replace(/\/$/, '') !== resolve('/app'))
+					await goto(resolve('/app'));
+			}
+		} finally {
+			importing = false;
+		}
 	}
 	async function signOut() {
 		openMenu = null;
@@ -125,12 +151,23 @@
 								onclick={() => (openMenu = null)}
 							>
 								{t($locale, 'admin')}
-							</a>{/if}<button type="button" onclick={signOut}>{t($locale, 'signOut')}</button>
+							</a>{/if}<button type="button" disabled={importing} onclick={openImportPicker}>
+							{t($locale, importing ? 'importingSongs' : 'importSongs')}
+						</button><button type="button" onclick={signOut}>{t($locale, 'signOut')}</button>
 					</div>{/if}
 			</div>
 		{/if}
 	</nav>
 </header>
+<input
+	bind:this={importInput}
+	type="file"
+	accept={chordProFileAccept}
+	multiple
+	hidden
+	aria-label={t($locale, 'importSongs')}
+	onchange={importSelected}
+/>
 <main>{@render children()}</main>
 {#if $confirmation}<ConfirmationDialog
 		request={$confirmation}

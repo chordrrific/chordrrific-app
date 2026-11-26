@@ -54,4 +54,10 @@ describe('library facets', () => {
 		]);
 		expect(displayAuthor(songMetadata(songs[2].content))).toBe('Bach');
 	});
+	it('matches song titles regardless of accents and letter case', () => {
+		const titled = { ...songs[0], title: 'Título' };
+		for (const query of ['TITULO', 'Título', 'tÍtulo', 'Titulo', 'Ti\u0301tulo']) {
+			expect(visibleLibrarySongs([titled], [], query, []).map((song) => song.id)).toEqual(['a']);
+		}
+	});
 });
