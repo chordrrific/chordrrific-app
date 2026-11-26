@@ -10,6 +10,12 @@
 		type Notation,
 		type PreviewPart
 	} from '#lib/client/song-preview.js';
+	import {
+		chromaticTones,
+		defaultViewerMusicConfig,
+		symbolKeyName,
+		toneLabel
+	} from '#lib/client/viewer-music.js';
 	import SongLine from './SongLine.svelte';
 	import Icon from './Icon.svelte';
 
@@ -23,8 +29,22 @@
 	});
 	let library = $state.raw<typeof import('chordsheetjs') | null>(null);
 	let loadError = $state<string | null>(null);
-	let chorusMenuOpen = $state(false);
+	let openMenu = $state<'transpose' | 'chorus' | null>(null);
 	const chorusModes: readonly ChorusMode[] = ['label', 'expanded', 'hidden'];
+	const notations: readonly Notation[] = [
+		'symbol',
+		'solfege',
+		'special-solfege',
+		'number',
+		'roman'
+	];
+	const notationLabels = {
+		symbol: 'letters',
+		solfege: 'solfege',
+		'special-solfege': 'specialSolfege',
+		number: 'nashville',
+		roman: 'roman'
+	} as const;
 
 	onMount(() => {
 		initChorusMode();
@@ -53,27 +73,35 @@
 				)
 			: null
 	);
-	let hasKey = $derived(preview?.hasKey ?? false);
 	let hasChords = $derived(preview?.hasChords ?? false);
+	let originalKey = $derived(preview?.originalKey ?? null);
+	let currentKey = $derived(preview?.currentKey ?? null);
+	let tones = $derived(originalKey ? chromaticTones(originalKey, notation) : []);
+
+	function cycleNotation() {
+		const next = (notations.indexOf(notation) + 1) % notations.length;
+		notation = notations[next];
+		openMenu = null;
+	}
 
 	function chooseChorusMode(mode: ChorusMode) {
 		referenceModes = { content, modes: {} };
 		setChorusMode(mode);
-		chorusMenuOpen = false;
+		openMenu = null;
 	}
 	function closeMenuOutside(event: PointerEvent) {
 		if (
-			chorusMenuOpen &&
+			openMenu &&
 			event.target instanceof Element &&
-			!event.target.closest('.viewer-chorus-control')
+			!event.target.closest('.viewer-menu-control')
 		)
-			chorusMenuOpen = false;
+			openMenu = null;
 	}
 	function closeMenuOnEscape(event: KeyboardEvent) {
 		if (event.key !== 'Escape') return;
 		event.preventDefault();
 		event.stopPropagation();
-		chorusMenuOpen = false;
+		openMenu = null;
 	}
 
 	function toggleReference(sourceIndex: number, expanded: boolean) {
@@ -87,7 +115,10 @@
 	}
 </script>
 
-<svelte:window onpointerdown={closeMenuOutside} />
+<svelte:window
+	onpointerdown={closeMenuOutside}
+	onkeydown={openMenu ? closeMenuOnEscape : undefined}
+/>
 
 {#snippet chorusReference(sourceIndex: number, targetSourceIndex: number, expanded: boolean)}
 	<div class="chorus-reference" class:expanded>
@@ -128,40 +159,76 @@
 <div class="song-viewer">
 	<div class="viewer-controls">
 		<div class="toolbar">
-			{#if hasChords}<label>
-					{t($locale, 'transpose')}
-					<div class="actions">
-						<button onclick={() => (semitones -= 1)} aria-label="Down one semitone">−</button><span>
-							{semitones > 0 ? '+' : ''}{semitones}
-						</span><button onclick={() => (semitones += 1)} aria-label="Up one semitone">+</button>
-					</div>
-				</label>
-				<label>
-					{t($locale, 'notation')}
-					<select bind:value={notation}>
-						<option value="symbol">{t($locale, 'letters')}</option>
-						<option value="solfege">{t($locale, 'solfege')}</option>
-						<option value="number" disabled={!hasKey}>{t($locale, 'nashville')}</option>
-					</select>
-				</label>{/if}
-			<div class="viewer-chorus-control">
+			{#if hasChords && originalKey && currentKey}
+				<div class="viewer-menu-control viewer-transpose-control">
+					<button
+						type="button"
+						class="viewer-control-button viewer-tone-button"
+						aria-label={`${t($locale, 'transpose')}: ${toneLabel(currentKey, notation)}`}
+						title={t($locale, 'transpose')}
+						aria-expanded={openMenu === 'transpose'}
+						onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
+					>
+						{toneLabel(currentKey, notation)}
+					</button>
+					{#if openMenu === 'transpose'}
+						<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
+							<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
+								{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
+							</button>
+							<input
+								type="range"
+								min="-5"
+								max="6"
+								step="1"
+								bind:value={semitones}
+								aria-label={t($locale, 'transpose')}
+							/>
+							<div class="viewer-tone-scale">
+								{#each tones as tone (tone.offset)}
+									<button
+										type="button"
+										class:original={tone.offset === 0}
+										class:active={tone.offset === semitones}
+										title={tone.label}
+										aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
+										onclick={() => (semitones = tone.offset)}
+									>
+										{tone.label}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
+				<button
+					type="button"
+					class="viewer-control-button viewer-notation-button"
+					aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+					title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+					onclick={cycleNotation}
+				>
+					<Icon name="music" size={22} /><span class="viewer-key-badge">
+						{symbolKeyName(originalKey, defaultViewerMusicConfig)}
+					</span>
+				</button>
+			{/if}
+			<div class="viewer-menu-control viewer-chorus-control">
 				<button
 					type="button"
 					class="viewer-control-button"
 					aria-label={t($locale, 'chorusDisplay')}
 					title={t($locale, 'chorusDisplay')}
-					aria-expanded={chorusMenuOpen}
-					onclick={() => (chorusMenuOpen = !chorusMenuOpen)}
-					onkeydown={chorusMenuOpen ? closeMenuOnEscape : undefined}
+					aria-expanded={openMenu === 'chorus'}
+					onclick={() => (openMenu = openMenu === 'chorus' ? null : 'chorus')}
 				>
 					<Icon name="chorus" size={20} />
 				</button>
-				{#if chorusMenuOpen}<div
+				{#if openMenu === 'chorus'}<div
 						class="viewer-control-menu"
 						role="menu"
 						tabindex="-1"
 						aria-label={t($locale, 'chorusDisplay')}
-						onkeydown={closeMenuOnEscape}
 					>
 						{#each chorusModes as mode (mode)}
 							<button

@@ -1,6 +1,15 @@
 type ChordSheetLibrary = typeof import('chordsheetjs');
+import {
+	defaultViewerMusicConfig,
+	displayViewerChord,
+	originalSongKey,
+	transposeSongKey,
+	type SongKey,
+	type ViewerMusicConfig
+} from './viewer-music.js';
 
-export type Notation = 'symbol' | 'solfege' | 'number';
+export type { Notation } from './viewer-music.js';
+import type { Notation } from './viewer-music.js';
 export type ChorusMode = 'label' | 'expanded' | 'hidden';
 
 export interface PreviewSegment {
@@ -70,7 +79,31 @@ export interface SongPreview {
 	blocks: PreviewBlock[];
 	hasKey: boolean;
 	hasChords: boolean;
+	originalKey: SongKey | null;
+	currentKey: SongKey | null;
 	error: string | null;
+}
+
+function displayParts(
+	library: ChordSheetLibrary,
+	parts: PreviewPart[],
+	notation: Notation,
+	key: SongKey | null,
+	musicDisplay: ViewerMusicConfig
+): PreviewPart[] {
+	return parts.map((part) =>
+		part.kind === 'line'
+			? {
+					...part,
+					segments: part.segments.map((segment) => ({
+						...segment,
+						chord: segment.chord
+							? displayViewerChord(library, segment.chord, notation, key, musicDisplay)
+							: ''
+					}))
+				}
+			: { ...part, parts: displayParts(library, part.parts, notation, key, musicDisplay) }
+	);
 }
 
 function collectBlocks(
@@ -270,41 +303,38 @@ export function renderSongPreview(
 	semitones: number,
 	chorusMode: ChorusMode = 'label',
 	bisDisplay: BisDisplayConfig = defaultBisDisplayConfig,
-	referenceModes: Readonly<Record<number, ChorusMode>> = {}
+	referenceModes: Readonly<Record<number, ChorusMode>> = {},
+	musicDisplay: ViewerMusicConfig = defaultViewerMusicConfig
 ): SongPreview {
 	let hasKey = false;
 	let hasChords = false;
+	let originalKey: SongKey | null = null;
+	let currentKey: SongKey | null = null;
 	try {
 		let song = new library.ChordProParser().parse(content);
 		hasKey = Boolean(song.key);
 		hasChords = song.lines.some((line) =>
 			line.items.some((item) => item instanceof library.ChordLyricsPair && Boolean(item.chords))
 		);
-		song = song.transpose(semitones);
-		if (!hasKey && notation === 'number') {
-			throw new Error('Nashville notation requires {key: ...}.');
-		}
-
-		const key = song.key ?? 'C';
-		song = song.changeChords((chord) => {
-			if (!hasKey && !chord.isChordSymbol() && !chord.isChordSolfege()) {
-				throw new Error('A {key: ...} directive is required to convert relative chords.');
-			}
-			switch (notation) {
-				case 'symbol':
-					return chord.toChordSymbol(key);
-				case 'solfege':
-					return chord.toChordSolfege(key);
-				case 'number':
-					return chord.toNumeric(key);
-			}
-		});
+		originalKey = originalSongKey(library, song);
+		currentKey = originalKey ? transposeSongKey(originalKey, semitones) : null;
+		song = song.transpose(semitones, { accidental: musicDisplay.accidental });
+		const source = collectBlocks(library, song, bisDisplay).map((block): SourceBlock =>
+			block.kind === 'section'
+				? {
+						...block,
+						parts: displayParts(library, block.parts, notation, currentKey, musicDisplay)
+					}
+				: block
+		);
 
 		return {
 			title: song.getSingleMetadataValue('title'),
-			blocks: displayBlocks(collectBlocks(library, song, bisDisplay), chorusMode, referenceModes),
+			blocks: displayBlocks(source, chorusMode, referenceModes),
 			hasKey,
 			hasChords,
+			originalKey,
+			currentKey,
 			error: null
 		};
 	} catch (cause) {
@@ -313,6 +343,8 @@ export function renderSongPreview(
 			blocks: [],
 			hasKey,
 			hasChords,
+			originalKey,
+			currentKey,
 			error: cause instanceof Error ? cause.message : String(cause)
 		};
 	}

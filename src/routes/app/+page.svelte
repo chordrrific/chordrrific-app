@@ -856,7 +856,7 @@
 						</button>
 					</div>
 				</form>
-			{:else if modalSong}<SongViewer content={modalSong.content} />{/if}
+			{:else if modalSong}{#key modalSong.id}<SongViewer content={modalSong.content} />{/key}{/if}
 		</div>
 	</div>
 {/if}

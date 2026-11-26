@@ -41,12 +41,12 @@ function bis(section: Section): PreviewBis[] {
 }
 
 describe('song preview', () => {
-	it('renders absolute solfege without a key and preserves written accidentals', () => {
+	it('renders absolute solfege without a key and prefers sharps', () => {
 		const preview = renderSongPreview(library, '[C]Do [F#]Fa [Bb]Si', 'solfege', 0);
 		expect(preview.error).toBeNull();
 		expect(preview.hasKey).toBe(false);
 		expect(preview.hasChords).toBe(true);
-		expect(chords(sections(preview)[0])).toEqual(['Do', 'Fa#', 'Sib']);
+		expect(chords(sections(preview)[0])).toEqual(['Do', 'Fa#', 'La#']);
 	});
 	it('identifies a song with no chords even when it has a key directive', () => {
 		const preview = renderSongPreview(
@@ -82,10 +82,27 @@ describe('song preview', () => {
 		expect(chords(sections(valid)[0])).toEqual(['Do']);
 	});
 
-	it('requires a key for Nashville notation', () => {
-		expect(renderSongPreview(library, '[C]Hola', 'number', 0).error).toContain('{key: ...}');
+	it('infers the original tone from the first chord for Nashville notation', () => {
+		const inferred = renderSongPreview(library, '[C]Hola [G]mundo', 'number', 0);
+		expect(inferred.error).toBeNull();
+		expect(inferred.originalKey).toEqual({ pitchClass: 0, minor: false });
+		expect(chords(sections(inferred)[0])).toEqual(['1', '5']);
 		const preview = renderSongPreview(library, '{key: C}\n[C]Hola', 'number', 0);
 		expect(chords(sections(preview)[0])).toEqual(['1']);
+	});
+
+	it('uses an explicit minor key for Nashville and Roman degrees', () => {
+		const content = '{key: Am}\n[Am7]Uno [Dm]Dos [E7]Tres';
+		const numeric = renderSongPreview(library, content, 'number', 0);
+		const roman = renderSongPreview(library, content, 'roman', 0);
+		expect(numeric.originalKey).toEqual({ pitchClass: 9, minor: true });
+		expect(chords(sections(numeric)[0])).toEqual(['1m7', '4m', '57']);
+		expect(chords(sections(roman)[0])).toEqual(['i7', 'iv', 'V7']);
+	});
+
+	it('uses capitalization to distinguish special solfege minor chords', () => {
+		const preview = renderSongPreview(library, '[Am7]Uno [A7]Dos', 'special-solfege', 0);
+		expect(chords(sections(preview)[0])).toEqual(['la7', 'LA7']);
 	});
 
 	it('shows a chorus reference as a label by default', () => {
