@@ -42,7 +42,8 @@ const strings = {
 		formatSong: 'Formatear',
 		titleDirectiveRequired: 'Añade {title: ...} antes de guardar.',
 		name: 'Nombre',
-		search: 'Buscar por título',
+		search: 'Filtrar por título',
+		clearTitleFilter: 'Limpiar filtro de título',
 		allCollections: 'Todas las colecciones',
 		allTags: 'Todas las etiquetas',
 		newSong: 'Nueva canción',
@@ -83,6 +84,8 @@ const strings = {
 		resetPassword: 'Cambiar contraseña',
 		confirmDelete: '¿Seguro que quieres eliminarlo?',
 		saved: 'Guardado.',
+		deleted: 'Eliminado.',
+		error: 'Error',
 		privateLibrary: 'Tu cancionero privado',
 		intro: 'Guarda, organiza y visualiza tus canciones en ChordPro.',
 		selectSong: 'Selecciona una canción para verla o editarla.',
@@ -131,7 +134,15 @@ const strings = {
 		confirmBulkDelete: '¿Eliminar todas las canciones seleccionadas?',
 		noResults: 'Ninguna canción coincide con los filtros.',
 		filterInclude: 'Incluido',
-		filterExclude: 'Excluido'
+		filterExclude: 'Excluido',
+		notifications: 'Notificaciones',
+		noNotifications: 'No hay notificaciones.',
+		markAsRead: 'Marcar como leída',
+		deleteNotification: 'Eliminar notificación',
+		unsavedNavigation:
+			'Hay cambios sin guardar en esta canción. ¿Quieres guardarlos antes de pasar a otra?',
+		saveAndNavigate: 'Guardar y cambiar',
+		stayEditing: 'Cancelar y seguir editando'
 	},
 	en: {
 		brand: 'Chordrrific',
@@ -158,7 +169,8 @@ const strings = {
 		formatSong: 'Format',
 		titleDirectiveRequired: 'Add {title: ...} before saving.',
 		name: 'Name',
-		search: 'Search by title',
+		search: 'Filter by title',
+		clearTitleFilter: 'Clear title filter',
 		allCollections: 'All collections',
 		allTags: 'All tags',
 		newSong: 'New song',
@@ -199,6 +211,8 @@ const strings = {
 		resetPassword: 'Change password',
 		confirmDelete: 'Are you sure you want to delete it?',
 		saved: 'Saved.',
+		deleted: 'Deleted.',
+		error: 'Error',
 		privateLibrary: 'Your private songbook',
 		intro: 'Save, organize and view your songs in ChordPro.',
 		selectSong: 'Select a song to view or edit it.',
@@ -247,7 +261,14 @@ const strings = {
 		confirmBulkDelete: 'Delete all selected songs?',
 		noResults: 'No songs match these filters.',
 		filterInclude: 'Included',
-		filterExclude: 'Excluded'
+		filterExclude: 'Excluded',
+		notifications: 'Notifications',
+		noNotifications: 'No notifications.',
+		markAsRead: 'Mark as read',
+		deleteNotification: 'Delete notification',
+		unsavedNavigation: 'This song has unsaved changes. Save them before moving to another song?',
+		saveAndNavigate: 'Save and move',
+		stayEditing: 'Cancel and keep editing'
 	}
 } as const;
 

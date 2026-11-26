@@ -11,13 +11,10 @@
 	} from '#lib/client/library.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import { formatChordPro } from '#lib/client/chordpro-language.js';
+	import { notify } from '#lib/client/notifications.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
-	import {
-		chordProFileAccept,
-		importChordProFiles,
-		type SongImportResult
-	} from '#lib/client/song-import.js';
+	import { chordProFileAccept, importChordProFiles } from '#lib/client/song-import.js';
 	import type { Collection, Song } from '#lib/client/types.js';
 	import SongViewer from '#lib/components/SongViewer.svelte';
 	import ChordProEditor from '#lib/components/ChordProEditor.svelte';
@@ -38,18 +35,21 @@
 	let creating = $state(false);
 	let modalMode = $state<'view' | 'edit'>('view');
 	let content = $state('');
+	let pendingSongId = $state<string | null>(null);
 	let membershipKind = $state<'tag' | 'collection' | null>(null);
 	let membershipTargets = $state<string[]>([]);
 	let membershipNames = $state<string[]>([]);
 	let membershipInput = $state('');
 	let membershipBulk = $state(false);
 	let membershipOperation = $state<'add' | 'remove'>('add');
-	let message = $state('');
 	let busy = $state(false);
 	let importing = $state(false);
-	let importResults = $state<SongImportResult[]>([]);
 	let fileInput: HTMLInputElement;
 	let touchStart: { x: number; y: number } | null = null;
+	let gestureStart: { x: number; y: number } | null = null;
+	function focusOnMount(node: HTMLElement) {
+		node.focus();
+	}
 
 	let facets = $derived(libraryFacets(songs));
 	let visibleSongs = $derived(visibleLibrarySongs(songs, filters, search, collections));
@@ -62,11 +62,6 @@
 				)
 			: collections.map((collection) => collection.name)
 	);
-	let importedCount = $derived(
-		importResults.filter((result) => result.status === 'imported').length
-	);
-	let failedCount = $derived(importResults.length - importedCount);
-
 	async function loadCatalog() {
 		try {
 			[songs, collections] = await Promise.all([
@@ -75,7 +70,11 @@
 			]);
 			selectedIds = selectedIds.filter((id) => songs.some((song) => song.id === id));
 		} catch (cause) {
-			message = cause instanceof Error ? cause.message : String(cause);
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
 		}
 	}
 	onMount(() => {
@@ -106,13 +105,13 @@
 			: [...expanded, key];
 	}
 	function touchBegin(event: TouchEvent) {
-		if (window.innerWidth > 800) return;
+		if (window.innerWidth > 800 || modalOpen) return;
 		const touch = event.touches[0];
 		if (touch && (sidebarOpen || touch.clientX < 40))
 			touchStart = { x: touch.clientX, y: touch.clientY };
 	}
 	function touchEnd(event: TouchEvent) {
-		if (!touchStart) return;
+		if (!touchStart || modalOpen) return;
 		const touch = event.changedTouches[0];
 		if (touch && Math.abs(touch.clientY - touchStart.y) < 65) {
 			const distance = touch.clientX - touchStart.x;
@@ -127,7 +126,7 @@
 		modalMode = mode;
 		content = song.content;
 		modalOpen = true;
-		message = '';
+		pendingSongId = null;
 	}
 	function newSong() {
 		modalId = null;
@@ -135,13 +134,13 @@
 		modalMode = 'edit';
 		content = '{title: }\n{key: C}\n\n[C]';
 		modalOpen = true;
-		message = '';
+		pendingSongId = null;
 	}
 	function closeSong() {
 		modalOpen = false;
 		creating = false;
 		content = '';
-		message = '';
+		pendingSongId = null;
 	}
 	function switchMode() {
 		if (modalMode === 'edit') {
@@ -155,11 +154,51 @@
 			content = modalSong?.content ?? '';
 			modalMode = 'edit';
 		}
-		message = '';
 	}
 	function navigateSong(delta: number) {
 		const song = visibleSongs[modalIndex + delta];
-		if (song) openSong(song, modalMode);
+		if (!song) return;
+		if (modalMode === 'edit' && content !== modalSong?.content) {
+			pendingSongId = song.id;
+			return;
+		}
+		openSong(song, modalMode);
+	}
+	function gestureBegin(x: number, y: number, target: EventTarget | null) {
+		if (creating || pendingSongId || !(target instanceof Element)) return;
+		if (
+			target.closest(
+				'button, a, input, textarea, select, .chordpro-editor, [contenteditable="true"]'
+			)
+		)
+			return;
+		gestureStart = { x, y };
+	}
+	function gestureEnd(x: number, y: number) {
+		if (!gestureStart) return;
+		const dx = x - gestureStart.x;
+		const dy = y - gestureStart.y;
+		gestureStart = null;
+		if (Math.abs(dx) >= 80 && Math.abs(dy) <= 65) navigateSong(dx > 0 ? -1 : 1);
+	}
+	function keydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			if (pendingSongId) {
+				if (!busy) pendingSongId = null;
+			} else if (membershipKind) membershipKind = null;
+			else if (modalOpen) closeSong();
+			else sidebarOpen = false;
+			return;
+		}
+		if (!modalOpen || creating || pendingSongId || membershipKind) return;
+		if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+		if (
+			event.target instanceof Element &&
+			event.target.closest('input, textarea, select, .chordpro-editor, [contenteditable="true"]')
+		)
+			return;
+		event.preventDefault();
+		navigateSong(event.key === 'ArrowLeft' ? -1 : 1);
 	}
 	function cardOpen(song: Song, event: MouseEvent) {
 		if (event.ctrlKey || event.metaKey) {
@@ -176,20 +215,38 @@
 		input.value = '';
 		if (!files.length) return;
 		importing = true;
-		importResults = [];
 		try {
-			importResults = await importChordProFiles(files, (song) =>
+			const results = await importChordProFiles(files, (song) =>
 				request<Song>('/api/songs', 'POST', song)
 			);
-			if (importResults.some((result) => result.status === 'imported')) await loadCatalog();
+			const imported = results.filter((result) => result.status === 'imported').length;
+			const failed = results.length - imported;
+			if (imported) await loadCatalog();
+			const report = results
+				.map((result) =>
+					result.status === 'imported'
+						? `${result.fileName} → ${result.title}`
+						: `${result.fileName}: ${result.error}`
+				)
+				.join('\n');
+			const body = report.length > 20_000 ? `${report.slice(0, 19_999)}…` : report;
+			await notify(
+				failed ? 'error' : 'success',
+				`${t($locale, 'importedCount')}: ${imported} · ${t($locale, 'failedCount')}: ${failed}`,
+				body
+			);
+		} catch (cause) {
+			void notify(
+				'error',
+				t($locale, 'importSummary'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
 		} finally {
 			importing = false;
 		}
 	}
-	async function saveSong(event: SubmitEvent) {
-		event.preventDefault();
+	async function persistSong(): Promise<boolean> {
 		busy = true;
-		message = '';
 		try {
 			if (!hasTitleDirective(content)) throw new Error(t($locale, 'titleDirectiveRequired'));
 			titleFromChordPro(content);
@@ -201,13 +258,34 @@
 			await loadCatalog();
 			modalId = song.id;
 			creating = false;
-			modalMode = 'view';
-			message = t($locale, 'saved');
+			content = song.content;
+			void notify('success', t($locale, 'saved'));
+			return true;
 		} catch (cause) {
-			message = cause instanceof Error ? cause.message : String(cause);
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
+			return false;
 		} finally {
 			busy = false;
 		}
+	}
+	async function saveSong(event: SubmitEvent) {
+		event.preventDefault();
+		if (await persistSong()) modalMode = 'view';
+	}
+	async function saveAndNavigate() {
+		const target = pendingSongId;
+		if (!target || busy) return;
+		if (!(await persistSong())) {
+			pendingSongId = null;
+			return;
+		}
+		const song = songs.find((item) => item.id === target);
+		if (song) openSong(song, 'edit');
+		else pendingSongId = null;
 	}
 	async function deleteSongs(ids: readonly string[]) {
 		if (
@@ -216,14 +294,18 @@
 		)
 			return;
 		busy = true;
-		message = '';
 		try {
 			for (const id of ids) await request(`/api/songs/${id}`, 'DELETE');
 			if (modalId && ids.includes(modalId)) closeSong();
 			selectedIds = [];
 			await loadCatalog();
+			void notify('success', t($locale, 'deleted'));
 		} catch (cause) {
-			message = cause instanceof Error ? cause.message : String(cause);
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
 			await loadCatalog();
 		} finally {
 			busy = false;
@@ -242,7 +324,6 @@
 				: kind === 'tag'
 					? songMetadata(song.content).tag
 					: song.collections.map((link) => link.collection.name);
-		message = '';
 	}
 	function addMembershipName(value = membershipInput) {
 		for (const part of value.split(',')) {
@@ -265,7 +346,6 @@
 		if (!membershipKind) return;
 		if (membershipInput.trim()) addMembershipName();
 		busy = true;
-		message = '';
 		try {
 			if (membershipKind === 'tag') {
 				for (const id of membershipTargets) {
@@ -335,9 +415,13 @@
 			membershipKind = null;
 			selectedIds = [];
 			await loadCatalog();
-			message = t($locale, 'saved');
+			void notify('success', t($locale, 'saved'));
 		} catch (cause) {
-			message = cause instanceof Error ? cause.message : String(cause);
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
 			await loadCatalog();
 		} finally {
 			busy = false;
@@ -345,17 +429,7 @@
 	}
 </script>
 
-<svelte:window
-	ontouchstart={touchBegin}
-	ontouchend={touchEnd}
-	onkeydown={(event) => {
-		if (event.key === 'Escape') {
-			if (membershipKind) membershipKind = null;
-			else if (modalOpen) closeSong();
-			else sidebarOpen = false;
-		}
-	}}
-/>
+<svelte:window ontouchstart={touchBegin} ontouchend={touchEnd} onkeydown={keydown} />
 <svelte:head><title>{t($locale, 'songs')} · Chordrrific</title></svelte:head>
 <div class="library-shell">
 	{#if sidebarOpen}<button
@@ -403,6 +477,15 @@
 					aria-label={t($locale, 'search')}
 					placeholder={t($locale, 'search')}
 				/>
+				{#if search}<button
+						type="button"
+						class="icon-button search-clear"
+						onclick={() => (search = '')}
+						aria-label={t($locale, 'clearTitleFilter')}
+						title={t($locale, 'clearTitleFilter')}
+					>
+						<Icon name="close" size={16} />
+					</button>{/if}
 			</div>
 			<button class="primary" onclick={newSong}>
 				<Icon name="plus" size={18} />{t($locale, 'newSong')}
@@ -420,17 +503,6 @@
 				onchange={importSelected}
 			/>
 		</div>
-		{#if importResults.length}<section class="card import-results" aria-live="polite">
-				<h2>{t($locale, 'importSummary')}</h2>
-				<p>
-					{t($locale, 'importedCount')}: {importedCount} · {t($locale, 'failedCount')}: {failedCount}
-				</p>
-				<ul>
-					{#each importResults as result, index (index)}<li>
-							{result.fileName}: {result.status === 'imported' ? result.title : result.error}
-						</li>{/each}
-				</ul>
-			</section>{/if}
 		<div class="library-results-heading">
 			<h1>{t($locale, 'songs')}</h1>
 			<span class="muted">{visibleSongs.length} {t($locale, 'songCount')}</span>
@@ -466,7 +538,6 @@
 		{:else}<p class="empty-library">
 				{songs.length ? t($locale, 'noResults') : t($locale, 'noSongs')}
 			</p>{/if}
-		{#if message && !modalOpen && !membershipKind}<p class="error" role="status">{message}</p>{/if}
 	</section>
 </div>
 
@@ -475,8 +546,25 @@
 	<div
 		class="song-dialog"
 		role="dialog"
+		tabindex="-1"
+		use:focusOnMount
 		aria-modal="true"
 		aria-label={creating ? t($locale, 'newSong') : (modalSong?.title ?? t($locale, 'songs'))}
+		ontouchstart={(event) => {
+			const touch = event.touches[0];
+			if (touch) gestureBegin(touch.clientX, touch.clientY, event.target);
+		}}
+		ontouchend={(event) => {
+			const touch = event.changedTouches[0];
+			if (touch) gestureEnd(touch.clientX, touch.clientY);
+		}}
+		onpointerdown={(event) => {
+			if (event.pointerType === 'mouse' && event.button === 0)
+				gestureBegin(event.clientX, event.clientY, event.target);
+		}}
+		onpointerup={(event) => {
+			if (event.pointerType === 'mouse') gestureEnd(event.clientX, event.clientY);
+		}}
 	>
 		<div class="song-dialog-header">
 			<div class="song-dialog-title">
@@ -533,9 +621,6 @@
 					</div>
 				</form>
 			{:else if modalSong}<SongViewer content={modalSong.content} />{/if}
-			{#if message}<p class={message === t($locale, 'saved') ? 'success' : 'error'} role="status">
-					{message}
-				</p>{/if}
 		</div>
 	</div>
 {/if}
@@ -602,6 +687,24 @@
 				{t($locale, 'save')}
 			</button>
 		</div>
-		{#if message}<p class="error" role="status">{message}</p>{/if}
+	</div>
+{/if}
+
+{#if pendingSongId}
+	<div class="dialog-scrim top"></div>
+	<div
+		class="unsaved-dialog"
+		role="alertdialog"
+		aria-modal="true"
+		aria-label={t($locale, 'unsavedNavigation')}
+	>
+		<p>{t($locale, 'unsavedNavigation')}</p>
+		<div class="actions">
+			<button type="button" disabled={busy} onclick={() => (pendingSongId = null)}>
+				{t($locale, 'stayEditing')}
+			</button><button type="button" class="primary" disabled={busy} onclick={saveAndNavigate}>
+				{t($locale, 'saveAndNavigate')}
+			</button>
+		</div>
 	</div>
 {/if}

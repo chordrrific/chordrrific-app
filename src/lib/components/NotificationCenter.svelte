@@ -1,0 +1,91 @@
+<script lang="ts">
+	import { locale, t } from '#lib/client/i18n.js';
+	import {
+		dismissToast,
+		markRead,
+		notifications,
+		removeNotification,
+		toastIds
+	} from '#lib/client/notifications.js';
+	import Icon from './Icon.svelte';
+
+	let failure = $state('');
+	let unread = $derived($notifications.filter((entry) => !entry.readAt).length);
+	let visibleToasts = $derived(
+		$toastIds.flatMap((id) => {
+			const entry = $notifications.find((item) => item.id === id);
+			return entry ? [entry] : [];
+		})
+	);
+	async function act(action: () => Promise<void>) {
+		failure = '';
+		try {
+			await action();
+		} catch (cause) {
+			failure = cause instanceof Error ? cause.message : String(cause);
+		}
+	}
+	function date(value: string): string {
+		return new Intl.DateTimeFormat($locale, { dateStyle: 'short', timeStyle: 'short' }).format(
+			new Date(value)
+		);
+	}
+</script>
+
+<details class="header-menu notification-menu">
+	<summary
+		class="icon-button notification-bell"
+		aria-label={t($locale, 'notifications')}
+		title={t($locale, 'notifications')}
+	>
+		<Icon name="bell" />
+		{#if unread > 0}<span class="notification-badge">{unread > 99 ? '99+' : unread}</span>{/if}
+	</summary>
+	<div class="notification-panel">
+		<h2>{t($locale, 'notifications')}</h2>
+		{#if !$notifications.length}<p class="muted">{t($locale, 'noNotifications')}</p>{/if}
+		{#if failure}<p class="error" role="alert">{failure}</p>{/if}
+		<ul>
+			{#each $notifications as entry (entry.id)}
+				<li class:unread={!entry.readAt} class:error-kind={entry.kind === 'error'}>
+					<div class="notification-entry-heading">
+						<strong>{entry.title}</strong><time datetime={entry.createdAt}>
+							{date(entry.createdAt)}
+						</time>
+					</div>
+					{#if entry.body}<p>{entry.body}</p>{/if}
+					<div class="notification-actions">
+						{#if !entry.readAt}<button type="button" onclick={() => act(() => markRead(entry.id))}>
+								<Icon name="check" size={15} />{t($locale, 'markAsRead')}
+							</button>{/if}
+						<button type="button" onclick={() => act(() => removeNotification(entry.id))}>
+							<Icon name="trash" size={15} />{t($locale, 'deleteNotification')}
+						</button>
+					</div>
+				</li>
+			{/each}
+		</ul>
+	</div>
+</details>
+
+<div class="toast-stack" aria-live="polite">
+	{#each visibleToasts as entry (entry.id)}
+		<div
+			class="notification-toast"
+			class:error-kind={entry.kind === 'error'}
+			role={entry.kind === 'error' ? 'alert' : 'status'}
+		>
+			<div>
+				<strong>{entry.title}</strong>{#if entry.body}<p>{entry.body}</p>{/if}
+			</div>
+			<button
+				type="button"
+				class="icon-button"
+				onclick={() => dismissToast(entry.id)}
+				aria-label={t($locale, 'close')}
+			>
+				<Icon name="close" size={17} />
+			</button>
+		</div>
+	{/each}
+</div>

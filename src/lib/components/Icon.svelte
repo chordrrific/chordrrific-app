@@ -19,7 +19,8 @@
 			| 'menu'
 			| 'search'
 			| 'upload'
-			| 'check';
+			| 'check'
+			| 'bell';
 		size?: number;
 	}>();
 </script>
@@ -61,5 +62,8 @@
 	{:else if name === 'menu'}<path d="M4 6h16M4 12h16M4 18h16" />
 	{:else if name === 'search'}<circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" />
 	{:else if name === 'upload'}<path d="M12 16V3m-4 4 4-4 4 4M4 16v5h16v-5" />
-	{:else if name === 'check'}<path d="m4 12 5 5L20 6" />{/if}
+	{:else if name === 'check'}<path d="m4 12 5 5L20 6" />
+	{:else if name === 'bell'}<path
+			d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9ZM10 21h4"
+		/>{/if}
 </svg>

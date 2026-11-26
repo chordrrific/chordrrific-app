@@ -5,6 +5,8 @@
 	import { locale, initLocale, setLocale, t } from '#lib/client/i18n.js';
 	import { request } from '#lib/client/api.js';
 	import Icon from '#lib/components/Icon.svelte';
+	import NotificationCenter from '#lib/components/NotificationCenter.svelte';
+	import { initializeNotifications } from '#lib/client/notifications.js';
 	import './layout.css';
 
 	let { data, children } = $props();
@@ -14,6 +16,9 @@
 		dark = localStorage.getItem('chordrrific-theme') === 'dark';
 		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 	});
+	$effect(() => {
+		if (typeof window !== 'undefined') void initializeNotifications(data.user?.id ?? null);
+	});
 	function toggleTheme() {
 		dark = !dark;
 		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -21,6 +26,7 @@
 	}
 	async function signOut() {
 		await request('/api/auth/logout', 'POST');
+		await initializeNotifications(null);
 		await refreshAll();
 		await goto(resolve('/login'));
 	}
@@ -61,6 +67,7 @@
 			</div>
 		</details>
 		{#if data.user}
+			<NotificationCenter />
 			<details class="header-menu">
 				<summary
 					class="icon-button"
