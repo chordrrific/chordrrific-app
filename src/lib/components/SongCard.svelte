@@ -4,10 +4,11 @@
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import Icon from './Icon.svelte';
-	let { song, selected, onOpen, onEdit, onDelete, onTags, onCollections } = $props<{
+	let { song, selected, onOpen, onSelect, onEdit, onDelete, onTags, onCollections } = $props<{
 		song: Song;
 		selected: boolean;
 		onOpen: (event: MouseEvent) => void;
+		onSelect: () => void;
 		onEdit: () => void;
 		onDelete: () => void;
 		onTags: () => void;
@@ -20,11 +21,20 @@
 <article class="song-card" class:selected>
 	<button
 		type="button"
+		class="song-select-toggle"
+		class:selected
+		onclick={onSelect}
+		aria-label={`${t($locale, selected ? 'removeFromSelection' : 'addToSelection')}: ${song.title}`}
+		aria-pressed={selected}
+	>
+		{#if selected}<Icon name="check" size={16} />{/if}
+	</button>
+	<button
+		type="button"
 		class="song-card-main"
 		onclick={onOpen}
 		aria-label={`${t($locale, 'view')}: ${song.title}`}
 	>
-		{#if selected}<span class="song-selected"><Icon name="check" size={16} /></span>{/if}
 		<strong class="song-card-title">{song.title}</strong>
 		{#if author}<span class="song-card-author">{author}</span>{/if}
 		{#if metadata.album[0] || metadata.year[0]}<span class="song-card-detail">

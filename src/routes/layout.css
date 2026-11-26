@@ -637,11 +637,12 @@ main {
 }
 .facet-heading {
 	display: grid;
-	grid-template-columns: 1.6rem minmax(0, 1fr) 1.5rem;
+	grid-template-columns: 1.6rem 2rem minmax(0, 1fr) 1.5rem;
 	align-items: center;
 }
-.facet-heading button,
-.facet-values button {
+.facet-expand,
+.facet-pin,
+.facet-choice {
 	border: 0;
 	background: transparent;
 	color: var(--ink);
@@ -673,6 +674,42 @@ main {
 .facet-pin.active {
 	color: var(--accent) !important;
 }
+.facet-selection-toggle {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--accent);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+}
+.facet-selection-toggle::before {
+	position: absolute;
+	width: 1.35rem;
+	height: 1.35rem;
+	border: 1.5px solid var(--muted);
+	border-radius: 50%;
+	content: '';
+}
+.facet-selection-toggle.included::before,
+.facet-selection-toggle.excluded::before {
+	border-color: var(--accent);
+}
+.facet-selection-toggle:hover {
+	background: transparent;
+}
+.facet-selection-toggle:hover::before {
+	border-color: var(--accent);
+}
+.facet-selection-toggle:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -1px;
+}
 .facet-choice {
 	display: flex;
 	align-items: center;
@@ -692,12 +729,6 @@ main {
 	background: color-mix(in srgb, var(--accent) 14%, var(--surface)) !important;
 	color: var(--accent) !important;
 }
-.facet-sign {
-	width: 0.75rem;
-	flex: none;
-	text-align: center;
-	font-weight: 800;
-}
 .facet-name {
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -713,6 +744,11 @@ main {
 	list-style: none;
 	margin: 0 0 0.35rem 1.6rem;
 	padding: 0;
+}
+.facet-values li {
+	display: grid;
+	grid-template-columns: 2rem minmax(0, 1fr);
+	align-items: center;
 }
 .facet-values .facet-choice {
 	font-size: 0.87rem;
@@ -834,7 +870,7 @@ main {
 }
 .song-card-title {
 	max-width: 100%;
-	padding-right: 0.8rem;
+	padding-right: 2rem;
 	overflow-wrap: anywhere;
 	font-size: 1.12rem;
 	line-height: 1.25;
@@ -847,11 +883,28 @@ main {
 	color: var(--muted);
 	font-size: 0.83rem;
 }
-.song-selected {
+.song-select-toggle {
 	position: absolute;
-	top: 0.75rem;
-	right: 0.75rem;
+	z-index: 1;
+	top: 0.7rem;
+	right: 0.7rem;
+	display: grid;
+	place-items: center;
+	width: 1.9rem;
+	height: 1.9rem;
+	padding: 0;
+	border: 1.5px solid var(--accent);
+	border-radius: 50%;
+	background: var(--surface);
 	color: var(--accent);
+}
+.song-select-toggle:hover {
+	background: var(--soft);
+}
+.song-select-toggle.selected,
+.song-select-toggle.selected:hover {
+	background: var(--accent);
+	color: var(--surface);
 }
 .song-card-collections,
 .song-card-tags {

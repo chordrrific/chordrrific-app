@@ -24,6 +24,13 @@
 	function state(key: FacetKey, value?: string): FacetSelection['mode'] | undefined {
 		return active.find((item: FacetSelection) => item.key === key && item.value === value)?.mode;
 	}
+	function selectionAction(key: FacetKey, value?: string): string {
+		const mode = state(key, value);
+		return t(
+			$locale,
+			mode === 'include' ? 'excludeFilter' : mode === 'exclude' ? 'removeFilter' : 'addFilter'
+		);
+	}
 </script>
 
 <div class="facet-list">
@@ -41,14 +48,22 @@
 				</button>
 				<button
 					type="button"
+					class="facet-selection-toggle"
+					class:included={state(facet.key) === 'include'}
+					class:excluded={state(facet.key) === 'exclude'}
+					onclick={() => onChoose(facet.key, undefined, true)}
+					aria-label={`${selectionAction(facet.key)}: ${t($locale, facet.key)}`}
+				>
+					{state(facet.key) === 'include' ? '+' : state(facet.key) === 'exclude' ? '−' : ''}
+				</button>
+				<button
+					type="button"
 					class="facet-choice"
 					class:included={state(facet.key) === 'include'}
 					class:excluded={state(facet.key) === 'exclude'}
 					onclick={(event) => onChoose(facet.key, undefined, event.ctrlKey || event.metaKey)}
 				>
-					<span class="facet-sign">
-						{state(facet.key) === 'include' ? '+' : state(facet.key) === 'exclude' ? '−' : ''}
-					</span><span>{t($locale, facet.key)}</span><span class="facet-count">{facet.count}</span>
+					<span>{t($locale, facet.key)}</span><span class="facet-count">{facet.count}</span>
 				</button>
 				<button
 					type="button"
@@ -65,19 +80,27 @@
 					{#each facet.values as entry (entry.value)}<li>
 							<button
 								type="button"
+								class="facet-selection-toggle"
+								class:included={state(facet.key, entry.value) === 'include'}
+								class:excluded={state(facet.key, entry.value) === 'exclude'}
+								onclick={() => onChoose(facet.key, entry.value, true)}
+								aria-label={`${selectionAction(facet.key, entry.value)}: ${entry.value}`}
+							>
+								{state(facet.key, entry.value) === 'include'
+									? '+'
+									: state(facet.key, entry.value) === 'exclude'
+										? '−'
+										: ''}
+							</button>
+							<button
+								type="button"
 								class="facet-choice"
 								class:included={state(facet.key, entry.value) === 'include'}
 								class:excluded={state(facet.key, entry.value) === 'exclude'}
 								onclick={(event) =>
 									onChoose(facet.key, entry.value, event.ctrlKey || event.metaKey)}
 							>
-								<span class="facet-sign">
-									{state(facet.key, entry.value) === 'include'
-										? '+'
-										: state(facet.key, entry.value) === 'exclude'
-											? '−'
-											: ''}
-								</span><span class="facet-name">{entry.value}</span><span class="facet-count">
+								<span class="facet-name">{entry.value}</span><span class="facet-count">
 									{entry.count}
 								</span>
 							</button>

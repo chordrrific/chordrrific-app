@@ -231,12 +231,15 @@
 	}
 	function cardOpen(song: Song, event: MouseEvent) {
 		if (event.ctrlKey || event.metaKey) {
-			selectedIds = selectedIds.includes(song.id)
-				? selectedIds.filter((id) => id !== song.id)
-				: [...selectedIds, song.id];
+			toggleSongSelection(song.id);
 			return;
 		}
 		openSong(song);
+	}
+	function toggleSongSelection(id: string) {
+		selectedIds = selectedIds.includes(id)
+			? selectedIds.filter((selectedId) => selectedId !== id)
+			: [...selectedIds, id];
 	}
 	async function importSelected(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
@@ -564,6 +567,7 @@
 						{song}
 						selected={selectedIds.includes(song.id)}
 						onOpen={(event) => cardOpen(song, event)}
+						onSelect={() => toggleSongSelection(song.id)}
 						onEdit={() => openSong(song, 'edit')}
 						onDelete={() => deleteSongs([song.id])}
 						onTags={() => openMembership('tag', [song.id])}
