@@ -14,6 +14,7 @@
 		cycleFacet,
 		libraryFacets,
 		retainAvailableFacets,
+		selectFacet,
 		soleCollectionFilter,
 		soleDisplayFilter,
 		visibleLibrarySongs,
@@ -40,6 +41,7 @@
 	let pinned = $state<FacetKey[]>([]);
 	let expanded = $state<FacetKey[]>([]);
 	let sidebarOpen = $state(false);
+	let modifierHeld = $state(false);
 	let selectedIds = $state<string[]>([]);
 	let modalOpen = $state(false);
 	let modalId = $state<string | null>(null);
@@ -139,7 +141,7 @@
 	});
 
 	function chooseFacet(key: FacetKey, value: string | undefined, additive: boolean) {
-		filters = cycleFacet(filters, key, value, additive);
+		filters = additive ? cycleFacet(filters, key, value, true) : selectFacet(key, value);
 		selectedIds = [];
 		if (!additive && window.innerWidth <= 800) sidebarOpen = false;
 	}
@@ -257,6 +259,7 @@
 		if (Math.abs(dx) >= 80 && Math.abs(dy) <= 65) navigateSong(dx > 0 ? -1 : 1);
 	}
 	function keydown(event: KeyboardEvent) {
+		if (event.ctrlKey || event.metaKey) modifierHeld = true;
 		if (event.key === 'Escape') {
 			if (drag) {
 				cancelDrag();
@@ -280,6 +283,9 @@
 			return;
 		event.preventDefault();
 		navigateSong(event.key === 'ArrowLeft' ? -1 : 1);
+	}
+	function keyup(event: KeyboardEvent) {
+		modifierHeld = event.ctrlKey || event.metaKey;
 	}
 	function beforeUnload(event: BeforeUnloadEvent) {
 		if (modalOpen && modalMode === 'edit' && content !== savedContent) {
@@ -590,6 +596,8 @@
 		if (drag?.pointerId === event.pointerId) cancelDrag();
 	}}
 	onkeydown={keydown}
+	onkeyup={keyup}
+	onblur={() => (modifierHeld = false)}
 	onbeforeunload={beforeUnload}
 />
 <svelte:head><title>{t($locale, 'songs')} · Chordrrific</title></svelte:head>
@@ -642,6 +650,7 @@
 		<FacetSidebar
 			{facets}
 			active={filters}
+			{modifierHeld}
 			{pinned}
 			{expanded}
 			onChoose={chooseFacet}

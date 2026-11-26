@@ -2,9 +2,10 @@
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Facet, FacetKey, FacetSelection } from '#lib/client/library.js';
 	import Icon from './Icon.svelte';
-	let { facets, active, pinned, expanded, onChoose, onPin, onExpand } = $props<{
+	let { facets, active, modifierHeld, pinned, expanded, onChoose, onPin, onExpand } = $props<{
 		facets: Facet[];
 		active: FacetSelection[];
+		modifierHeld: boolean;
 		pinned: FacetKey[];
 		expanded: FacetKey[];
 		onChoose: (key: FacetKey, value: string | undefined, additive: boolean) => void;
@@ -61,7 +62,8 @@
 					class="facet-choice"
 					class:included={state(facet.key) === 'include'}
 					class:excluded={state(facet.key) === 'exclude'}
-					onclick={(event) => onChoose(facet.key, undefined, event.ctrlKey || event.metaKey)}
+					onclick={(event) =>
+						onChoose(facet.key, undefined, event.ctrlKey || event.metaKey || modifierHeld)}
 				>
 					<span>{t($locale, facet.key)}</span><span class="facet-count">{facet.count}</span>
 				</button>
@@ -98,7 +100,7 @@
 								class:included={state(facet.key, entry.value) === 'include'}
 								class:excluded={state(facet.key, entry.value) === 'exclude'}
 								onclick={(event) =>
-									onChoose(facet.key, entry.value, event.ctrlKey || event.metaKey)}
+									onChoose(facet.key, entry.value, event.ctrlKey || event.metaKey || modifierHeld)}
 							>
 								<span class="facet-name">{entry.value}</span><span class="facet-count">
 									{entry.count}

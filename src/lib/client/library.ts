@@ -116,6 +116,10 @@ export function cycleFacet(
 	return nextMode ? [...base, { key, value, mode: nextMode }] : [...base];
 }
 
+export function selectFacet(key: FacetKey, value: string | undefined): FacetSelection[] {
+	return [{ key, value, mode: 'include' }];
+}
+
 export function soleDisplayFilter(
 	active: readonly FacetSelection[],
 	search: string

@@ -6,6 +6,7 @@ import {
 	displayAuthorFacet,
 	libraryFacets,
 	retainAvailableFacets,
+	selectFacet,
 	soleCollectionFilter,
 	soleDisplayFilter,
 	visibleLibrarySongs
@@ -55,6 +56,18 @@ describe('library facets', () => {
 		]);
 		active = cycleFacet(active, 'artist', 'Mecano', true);
 		expect(active).toEqual([{ key: 'artist', value: undefined, mode: 'include' }]);
+	});
+	it('replaces multiple filters with one included value on a plain click', () => {
+		const active = [
+			{ key: 'artist', value: 'Amaral', mode: 'include' },
+			{ key: 'tag', value: 'Pop', mode: 'exclude' }
+		] as const;
+		expect(selectFacet('tag', 'Pop')).toEqual([{ key: 'tag', value: 'Pop', mode: 'include' }]);
+		expect(selectFacet('artist', 'Amaral')).toEqual([active[0]]);
+		expect(cycleFacet(active, 'artist', 'Amaral', true)).toEqual([
+			active[1],
+			{ key: 'artist', value: 'Amaral', mode: 'exclude' }
+		]);
 	});
 	it('uses collection membership order for filtered cards and author fallback', () => {
 		const active = cycleFacet([], 'collection', 'Concierto', false);
