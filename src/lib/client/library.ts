@@ -1,11 +1,45 @@
+import Fuse from 'fuse.js';
 import {
 	metadataKeys,
 	songMetadata,
 	type MetadataKey,
 	type SongMetadata
 } from '#lib/core/song-metadata.js';
-import { foldSearchText } from '#lib/core/text-search.js';
+import { songSearchText } from '#lib/core/song-search-text.js';
 import type { Collection, Song } from './types.js';
+
+interface SongSearchDocument {
+	song: Song;
+	title: string;
+	metadata: string[];
+	collections: string[];
+	lyrics: string;
+}
+
+export function createSongSearch(songs: readonly Song[]): Fuse<SongSearchDocument> {
+	return new Fuse(
+		songs.map((song) => ({
+			song,
+			title: song.title,
+			...songSearchText(song.content),
+			collections: song.collections.map((link) => link.collection.name)
+		})),
+		{
+			keys: [
+				{ name: 'title', weight: 4 },
+				{ name: 'metadata', weight: 2 },
+				{ name: 'collections', weight: 2 },
+				{ name: 'lyrics', weight: 1 }
+			],
+			useTokenSearch: true,
+			tokenMatch: 'all',
+			ignoreDiacritics: true,
+			ignoreLocation: true,
+			threshold: 0.35,
+			shouldSort: false
+		}
+	);
+}
 
 export type FacetKey = MetadataKey | 'collection';
 export type FacetMode = 'include' | 'exclude';
@@ -71,12 +105,16 @@ export function visibleLibrarySongs(
 	songs: readonly Song[],
 	active: readonly FacetSelection[],
 	search: string,
-	collections: readonly Collection[]
+	collections: readonly Collection[],
+	searchIndex = createSongSearch(songs)
 ): Song[] {
-	const term = foldSearchText(search.trim());
+	const term = search.trim();
+	const matchingIds = term
+		? new Set(searchIndex.search(term).map(({ item }) => item.song.id))
+		: null;
 	const result = songs.filter(
 		(song) =>
-			(!term || foldSearchText(song.title).includes(term)) &&
+			(!matchingIds || matchingIds.has(song.id)) &&
 			active.every((item) => {
 				const values = songValues(song, item.key);
 				const matches =

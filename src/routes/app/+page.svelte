@@ -4,6 +4,7 @@
 	import { changedMembershipIds } from '#lib/client/catalog.js';
 	import { catalogRevision } from '#lib/client/catalog-state.js';
 	import {
+		createSongSearch,
 		cycleFacet,
 		libraryFacets,
 		visibleLibrarySongs,
@@ -53,7 +54,10 @@
 	}
 
 	let facets = $derived(libraryFacets(songs));
-	let visibleSongs = $derived(visibleLibrarySongs(songs, filters, search, collections));
+	let searchIndex = $derived(createSongSearch(songs));
+	let visibleSongs = $derived(
+		visibleLibrarySongs(songs, filters, search, collections, searchIndex)
+	);
 	let modalSong = $derived(songs.find((song) => song.id === modalId));
 	let modalIndex = $derived(visibleSongs.findIndex((song) => song.id === modalId));
 	let existingNames = $derived(
@@ -446,9 +450,12 @@
 			<h2>{t($locale, 'filters')}</h2>
 			<button
 				class="clear-filters"
-				disabled={!filters.length}
+				disabled={!filters.length && !search}
 				aria-label={`${t($locale, 'clearFilters')} ${t($locale, 'filters')}`}
-				onclick={() => (filters = [])}
+				onclick={() => {
+					filters = [];
+					search = '';
+				}}
 			>
 				{t($locale, 'clearFilters')}
 			</button>
@@ -460,6 +467,24 @@
 				<Icon name="close" />
 			</button>
 		</div>
+		<div class="search-field">
+			<Icon name="search" size={18} /><input
+				type="search"
+				bind:value={search}
+				aria-label={t($locale, 'search')}
+				placeholder={t($locale, 'search')}
+			/>
+			{#if search}<button
+					type="button"
+					class="icon-button search-clear"
+					onclick={() => (search = '')}
+					aria-label={t($locale, 'clearTextFilter')}
+					title={t($locale, 'clearTextFilter')}
+				>
+					<Icon name="close" size={16} />
+				</button>{/if}
+		</div>
+		<div class="filter-divider" aria-hidden="true"></div>
 		<FacetSidebar
 			{facets}
 			active={filters}
@@ -471,36 +496,15 @@
 		/>
 	</aside>
 	<section class="library-main">
-		<div class="library-toolbar">
+		<div class="library-results-heading">
 			<button
 				class="icon-button mobile-only"
 				onclick={() => (sidebarOpen = true)}
 				aria-label={t($locale, 'filters')}
+				title={t($locale, 'filters')}
 			>
 				<Icon name="menu" />
 			</button>
-			<div class="search-field">
-				<Icon name="search" size={18} /><input
-					type="search"
-					bind:value={search}
-					aria-label={t($locale, 'search')}
-					placeholder={t($locale, 'search')}
-				/>
-				{#if search}<button
-						type="button"
-						class="icon-button search-clear"
-						onclick={() => (search = '')}
-						aria-label={t($locale, 'clearTitleFilter')}
-						title={t($locale, 'clearTitleFilter')}
-					>
-						<Icon name="close" size={16} />
-					</button>{/if}
-			</div>
-			<button class="primary" onclick={newSong}>
-				<Icon name="plus" size={18} />{t($locale, 'newSong')}
-			</button>
-		</div>
-		<div class="library-results-heading">
 			<h1>{t($locale, 'songs')}</h1>
 			<span class="muted">
 				{visibleSongs.length}{#if filters.length || search.trim()}&nbsp;({t(
@@ -508,6 +512,14 @@
 						'filteredCount'
 					)}){/if}
 			</span>
+			<button
+				class="primary new-song-button"
+				onclick={newSong}
+				aria-label={t($locale, 'newSong')}
+				title={t($locale, 'newSong')}
+			>
+				<Icon name="plus" size={20} />
+			</button>
 		</div>
 		{#if selectedIds.length}<div class="bulk-toolbar">
 				<strong>{selectedIds.length} {t($locale, 'selectedCount')}</strong><button

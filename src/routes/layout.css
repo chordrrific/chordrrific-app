@@ -617,8 +617,11 @@ body:has(.library-shell) > div > main {
 }
 .library-sidebar {
 	position: relative;
+	display: flex;
+	flex-direction: column;
 	height: 100%;
-	overflow-y: auto;
+	min-height: 0;
+	overflow: hidden;
 	padding: 0.7rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
@@ -645,9 +648,19 @@ body:has(.library-shell) > div > main {
 .clear-filters:disabled {
 	visibility: hidden;
 }
+.filter-divider {
+	flex: none;
+	margin: 0.65rem 0.25rem 0.5rem;
+	border-top: 1px solid var(--border);
+}
 .facet-list {
 	display: grid;
+	align-content: start;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
 	gap: 0.2rem;
+	overscroll-behavior: contain;
 }
 .facet-section {
 	border-radius: 0.5rem;
@@ -782,25 +795,13 @@ body:has(.library-shell) > div > main {
 	min-height: 0;
 	container-type: inline-size;
 }
-.library-toolbar {
-	display: flex;
-	align-items: center;
-	gap: 0.6rem;
-	flex-wrap: wrap;
-	margin-bottom: 1.5rem;
-}
-.library-toolbar > button:not(.icon-button) {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.35rem;
-	white-space: nowrap;
-}
 .search-field {
 	display: flex;
 	align-items: center;
 	gap: 0.45rem;
-	flex: 1 1 220px;
-	min-width: 180px;
+	flex: none;
+	width: 100%;
+	min-width: 0;
 	padding: 0 0.75rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
@@ -825,12 +826,24 @@ body:has(.library-shell) > div > main {
 }
 .library-results-heading {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 0.8rem;
 	margin-bottom: 1rem;
 }
 .library-results-heading h1 {
 	margin: 0;
+}
+.library-results-heading .muted {
+	white-space: nowrap;
+}
+.new-song-button {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 2.4rem;
+	height: 2.4rem;
+	margin-left: auto;
+	padding: 0;
 }
 .bulk-toolbar {
 	display: flex;
@@ -1355,6 +1368,7 @@ body:has(.library-shell) > div > main {
 		bottom: 0;
 		left: 0;
 		width: min(84vw, 310px);
+		height: auto;
 		max-height: none;
 		border-radius: 0 0.85rem 0.85rem 0;
 		transform: translateX(-105%);
@@ -1388,20 +1402,14 @@ body:has(.library-shell) > div > main {
 	.song-dialog-body {
 		padding: 0.65rem;
 	}
-	.library-toolbar {
-		gap: 0.45rem;
-	}
-	.library-toolbar .search-field {
-		order: 2;
-		flex-basis: 100%;
-	}
-	.library-toolbar > button:not(.icon-button) {
-		flex: 1;
-		justify-content: center;
-		font-size: 0.85rem;
+	.library-results-heading {
+		gap: 0.35rem;
 	}
 	.library-results-heading h1 {
-		font-size: 1.45rem;
+		font-size: 1.25rem;
+	}
+	.library-results-heading .muted {
+		font-size: 0.85rem;
 	}
 }
 @media (hover: none) {

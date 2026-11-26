@@ -1,20 +1,4 @@
-import type { Collection, Song } from './types';
-import { foldSearchText } from '#lib/core/text-search.js';
-
-export function filterSongs(
-	songs: Song[],
-	search: string,
-	tagId: string,
-	collectionId: string
-): Song[] {
-	const term = foldSearchText(search.trim());
-	return songs.filter(
-		(song) =>
-			(!term || foldSearchText(song.title).includes(term)) &&
-			(!tagId || song.tags.some((link) => link.tagId === tagId)) &&
-			(!collectionId || song.collections.some((link) => link.collectionId === collectionId))
-	);
-}
+import type { Collection } from './types';
 
 export function collectionSongIds(collection: Collection): string[] {
 	return [...collection.songs].sort((a, b) => a.position - b.position).map((entry) => entry.songId);

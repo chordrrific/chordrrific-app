@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { cycleFacet, displayAuthor, libraryFacets, visibleLibrarySongs } from './library.js';
+import {
+	createSongSearch,
+	cycleFacet,
+	displayAuthor,
+	libraryFacets,
+	visibleLibrarySongs
+} from './library.js';
 import { songMetadata } from '#lib/core/song-metadata.js';
 import type { Collection, Song } from './types.js';
 
@@ -59,5 +65,43 @@ describe('library facets', () => {
 		for (const query of ['TITULO', 'Título', 'tÍtulo', 'Titulo', 'Ti\u0301tulo']) {
 			expect(visibleLibrarySongs([titled], [], query, []).map((song) => song.id)).toEqual(['a']);
 		}
+	});
+	it('searches metadata, collections and distant lyrics with typo tolerance', () => {
+		const song = {
+			...songs[0],
+			title: 'Alegría de Belén',
+			content:
+				'{title: Alegría de Belén}\n{artist: José Álvarez}\n{tag: Navidad}\n{subtitle: Nochebuena}\n' +
+				'Primera estrofa\n'.repeat(40) +
+				'La vi[E]rgen está lavando'
+		};
+		const library = [song, ...songs.slice(1)];
+		const index = createSongSearch(library);
+		for (const query of [
+			'ALEGRIA',
+			'jose',
+			'navidad',
+			'nochebuena',
+			'virgen',
+			'lavndo',
+			'jose lavndo'
+		]) {
+			expect(
+				visibleLibrarySongs(library, [], query, [collection], index).map(({ id }) => id),
+				query
+			).toEqual(['a']);
+		}
+		expect(
+			visibleLibrarySongs(library, [], 'consierto', [collection], index).map(({ id }) => id)
+		).toEqual(['a', 'b']);
+		expect(
+			visibleLibrarySongs(
+				library,
+				[{ key: 'collection', value: 'Concierto', mode: 'include' }],
+				'consierto',
+				[collection],
+				index
+			).map(({ id }) => id)
+		).toEqual(['b', 'a']);
 	});
 });
