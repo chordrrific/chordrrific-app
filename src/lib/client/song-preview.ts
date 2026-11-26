@@ -79,6 +79,7 @@ export interface SongPreview {
 	blocks: PreviewBlock[];
 	hasKey: boolean;
 	hasChords: boolean;
+	hasChorusReferences: boolean;
 	originalKey: SongKey | null;
 	currentKey: SongKey | null;
 	error: string | null;
@@ -308,6 +309,7 @@ export function renderSongPreview(
 ): SongPreview {
 	let hasKey = false;
 	let hasChords = false;
+	let hasChorusReferences = false;
 	let originalKey: SongKey | null = null;
 	let currentKey: SongKey | null = null;
 	try {
@@ -327,12 +329,14 @@ export function renderSongPreview(
 					}
 				: block
 		);
+		hasChorusReferences = source.some((block) => block.kind === 'chorus-reference');
 
 		return {
 			title: song.getSingleMetadataValue('title'),
 			blocks: displayBlocks(source, chorusMode, referenceModes),
 			hasKey,
 			hasChords,
+			hasChorusReferences,
 			originalKey,
 			currentKey,
 			error: null
@@ -343,6 +347,7 @@ export function renderSongPreview(
 			blocks: [],
 			hasKey,
 			hasChords,
+			hasChorusReferences,
 			originalKey,
 			currentKey,
 			error: cause instanceof Error ? cause.message : String(cause)

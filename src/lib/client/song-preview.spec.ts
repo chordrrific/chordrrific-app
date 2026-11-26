@@ -58,6 +58,7 @@ describe('song preview', () => {
 		expect(preview.error).toBeNull();
 		expect(preview.hasKey).toBe(true);
 		expect(preview.hasChords).toBe(false);
+		expect(preview.hasChorusReferences).toBe(false);
 	});
 
 	it('converts solfege source chords to symbols without a key', () => {
@@ -109,6 +110,7 @@ describe('song preview', () => {
 		const content = '{title: Test}\n{start_of_chorus}\n[C]Uno\n{end_of_chorus}\n\n{chorus}';
 		const preview = renderSongPreview(library, content, 'symbol', 0);
 		expect(preview.title).toBe('Test');
+		expect(preview.hasChorusReferences).toBe(true);
 		expect(preview.blocks.map((block) => block.kind)).toEqual(['section', 'chorus-label']);
 		const [original, reference] = preview.blocks;
 		expect(original.kind).toBe('section');
@@ -116,6 +118,29 @@ describe('song preview', () => {
 		if (original.kind !== 'section' || reference.kind !== 'chorus-label') return;
 		expect(reference.targetSourceIndex).toBe(original.sourceIndex);
 		expect(lyrics(sections(preview)[0])).toBe('Uno');
+	});
+	it('does not offer repeat controls for a chorus that is never recalled', () => {
+		const preview = renderSongPreview(
+			library,
+			'{start_of_chorus}\nSolo letra\n{end_of_chorus}',
+			'symbol',
+			0
+		);
+		expect(preview.error).toBeNull();
+		expect(preview.hasChords).toBe(false);
+		expect(preview.hasChorusReferences).toBe(false);
+	});
+	it('keeps repeat controls available when references are globally hidden', () => {
+		const preview = renderSongPreview(
+			library,
+			'{start_of_chorus}\nSolo letra\n{end_of_chorus}\n{chorus}',
+			'symbol',
+			0,
+			'hidden'
+		);
+		expect(preview.error).toBeNull();
+		expect(preview.hasChorusReferences).toBe(true);
+		expect(preview.blocks).toHaveLength(1);
 	});
 	it('hides chorus references without changing the chorus content', () => {
 		const content =

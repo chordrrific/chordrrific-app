@@ -10,12 +10,7 @@
 		type Notation,
 		type PreviewPart
 	} from '#lib/client/song-preview.js';
-	import {
-		chromaticTones,
-		defaultViewerMusicConfig,
-		symbolKeyName,
-		toneLabel
-	} from '#lib/client/viewer-music.js';
+	import { chromaticTones, toneLabel } from '#lib/client/viewer-music.js';
 	import SongLine from './SongLine.svelte';
 	import Icon from './Icon.svelte';
 
@@ -74,6 +69,7 @@
 			: null
 	);
 	let hasChords = $derived(preview?.hasChords ?? false);
+	let hasChorusReferences = $derived(preview?.hasChorusReferences ?? false);
 	let originalKey = $derived(preview?.originalKey ?? null);
 	let currentKey = $derived(preview?.currentKey ?? null);
 	let tones = $derived(originalKey ? chromaticTones(originalKey, notation) : []);
@@ -157,101 +153,105 @@
 {/snippet}
 
 <div class="song-viewer">
-	<div class="viewer-controls">
-		<div class="toolbar">
-			{#if hasChords && originalKey && currentKey}
-				<div class="viewer-menu-control viewer-transpose-control">
+	{#if (hasChords && originalKey && currentKey) || hasChorusReferences}
+		<div class="viewer-controls">
+			<div class="toolbar">
+				{#if hasChords && originalKey && currentKey}
+					<div class="viewer-menu-control viewer-transpose-control">
+						<button
+							type="button"
+							class="viewer-control-button viewer-tone-button"
+							aria-label={`${t($locale, 'transpose')}: ${toneLabel(currentKey, notation)}`}
+							title={t($locale, 'transpose')}
+							aria-expanded={openMenu === 'transpose'}
+							onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
+						>
+							{toneLabel(currentKey, notation)}
+						</button>
+						{#if openMenu === 'transpose'}
+							<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
+								<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
+									{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
+								</button>
+								<input
+									type="range"
+									min="-5"
+									max="6"
+									step="1"
+									bind:value={semitones}
+									aria-label={t($locale, 'transpose')}
+								/>
+								<div class="viewer-tone-scale">
+									{#each tones as tone (tone.offset)}
+										<button
+											type="button"
+											class:original={tone.offset === 0}
+											class:active={tone.offset === semitones}
+											title={tone.label}
+											aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
+											onclick={() => (semitones = tone.offset)}
+										>
+											{tone.label}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
 					<button
 						type="button"
-						class="viewer-control-button viewer-tone-button"
-						aria-label={`${t($locale, 'transpose')}: ${toneLabel(currentKey, notation)}`}
-						title={t($locale, 'transpose')}
-						aria-expanded={openMenu === 'transpose'}
-						onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
+						class="viewer-control-button viewer-notation-button"
+						aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+						title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+						onclick={cycleNotation}
 					>
-						{toneLabel(currentKey, notation)}
+						<Icon name="music" size={22} /><span class="viewer-key-badge">
+							{toneLabel(originalKey, notation)}
+						</span>
 					</button>
-					{#if openMenu === 'transpose'}
-						<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
-							<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
-								{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
-							</button>
-							<input
-								type="range"
-								min="-5"
-								max="6"
-								step="1"
-								bind:value={semitones}
-								aria-label={t($locale, 'transpose')}
-							/>
-							<div class="viewer-tone-scale">
-								{#each tones as tone (tone.offset)}
+				{/if}
+				{#if hasChorusReferences}
+					<div class="viewer-menu-control viewer-chorus-control">
+						<button
+							type="button"
+							class="viewer-control-button"
+							aria-label={t($locale, 'chorusDisplay')}
+							title={t($locale, 'chorusDisplay')}
+							aria-expanded={openMenu === 'chorus'}
+							onclick={() => (openMenu = openMenu === 'chorus' ? null : 'chorus')}
+						>
+							<Icon name="chorus" size={20} />
+						</button>
+						{#if openMenu === 'chorus'}<div
+								class="viewer-control-menu"
+								role="menu"
+								tabindex="-1"
+								aria-label={t($locale, 'chorusDisplay')}
+							>
+								{#each chorusModes as mode (mode)}
 									<button
 										type="button"
-										class:original={tone.offset === 0}
-										class:active={tone.offset === semitones}
-										title={tone.label}
-										aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
-										onclick={() => (semitones = tone.offset)}
+										role="menuitemradio"
+										aria-checked={$chorusMode === mode}
+										class:active={$chorusMode === mode}
+										onclick={() => chooseChorusMode(mode)}
 									>
-										{tone.label}
+										{t(
+											$locale,
+											mode === 'label'
+												? 'chorusOptionLabel'
+												: mode === 'expanded'
+													? 'chorusExpanded'
+													: 'chorusHidden'
+										)}
 									</button>
 								{/each}
-							</div>
-						</div>
-					{/if}
-				</div>
-				<button
-					type="button"
-					class="viewer-control-button viewer-notation-button"
-					aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
-					title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
-					onclick={cycleNotation}
-				>
-					<Icon name="music" size={22} /><span class="viewer-key-badge">
-						{symbolKeyName(originalKey, defaultViewerMusicConfig)}
-					</span>
-				</button>
-			{/if}
-			<div class="viewer-menu-control viewer-chorus-control">
-				<button
-					type="button"
-					class="viewer-control-button"
-					aria-label={t($locale, 'chorusDisplay')}
-					title={t($locale, 'chorusDisplay')}
-					aria-expanded={openMenu === 'chorus'}
-					onclick={() => (openMenu = openMenu === 'chorus' ? null : 'chorus')}
-				>
-					<Icon name="chorus" size={20} />
-				</button>
-				{#if openMenu === 'chorus'}<div
-						class="viewer-control-menu"
-						role="menu"
-						tabindex="-1"
-						aria-label={t($locale, 'chorusDisplay')}
-					>
-						{#each chorusModes as mode (mode)}
-							<button
-								type="button"
-								role="menuitemradio"
-								aria-checked={$chorusMode === mode}
-								class:active={$chorusMode === mode}
-								onclick={() => chooseChorusMode(mode)}
-							>
-								{t(
-									$locale,
-									mode === 'label'
-										? 'chorusOptionLabel'
-										: mode === 'expanded'
-											? 'chorusExpanded'
-											: 'chorusHidden'
-								)}
-							</button>
-						{/each}
-					</div>{/if}
+							</div>{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
-	</div>
+	{/if}
 	<div class="viewer" aria-label={t($locale, 'preview')} use:preventChordOverlap>
 		{#if loadError}<p class="error" role="alert">{t($locale, 'previewError')}: {loadError}</p>
 		{:else if preview?.error}<p class="error" role="alert">
