@@ -348,6 +348,18 @@ export function insertDirective(name: string): InsertedDirective {
 	return { text, cursor: text.length, tabTarget: null };
 }
 
+export function tabDestination(content: string, cursor: number): number | null {
+	const tokens = scanDirectives(content);
+	const directive = tokens.find((token) => cursor >= token.from && cursor < token.to);
+	if (directive) return directive.closed ? directive.to : null;
+	for (const chord of content.matchAll(/\[[^\]\r\n]*\]/g)) {
+		const from = chord.index;
+		const to = from + chord[0].length;
+		if (cursor >= from && cursor < to) return to;
+	}
+	return null;
+}
+
 export function wrapEnvironment(
 	content: string,
 	from: number,

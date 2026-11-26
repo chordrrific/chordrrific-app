@@ -7,6 +7,7 @@ import {
 	matchingEnvironments,
 	scanDirectives,
 	suggestedClosingDirective,
+	tabDestination,
 	wrapEnvironment
 } from './chordpro-language.js';
 
@@ -39,6 +40,15 @@ describe('ChordPro editor language', () => {
 		expect(insertDirective('start_of_verse-alto').text).toBe(
 			'{start_of_verse-alto}\n\n{end_of_verse}'
 		);
+	});
+	it('moves Tab past a completed directive or chord', () => {
+		const title = '{title: Alegría}';
+		expect(tabDestination(title, title.indexOf('}'))).toBe(title.length);
+		expect(tabDestination(title, title.length)).toBeNull();
+		const chord = '[Am]Alegría';
+		expect(tabDestination(chord, 2)).toBe(4);
+		expect(tabDestination(chord, 5)).toBeNull();
+		expect(tabDestination('{title: Alegría', 9)).toBeNull();
 	});
 
 	it('suggests the nearest unmatched closing tag and matches nested environments', () => {

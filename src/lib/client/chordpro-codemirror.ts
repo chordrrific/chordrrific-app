@@ -31,6 +31,7 @@ import {
 	matchingEnvironments,
 	scanDirectives,
 	suggestedClosingDirective,
+	tabDestination,
 	wrapEnvironment,
 	type DirectiveToken
 } from './chordpro-language.js';
@@ -40,6 +41,11 @@ export interface ChordProEditorController {
 	setLabel(label: string): void;
 	setChordCompletionConfig(config: ChordCompletionConfig): void;
 	destroy(): void;
+}
+
+export interface ChordProEditorOptions {
+	initialCursor?: number;
+	autoFocus?: boolean;
 }
 
 const hoveredDirective = StateEffect.define<number | null>();
@@ -169,7 +175,8 @@ export function createChordProEditor(
 	initialValue: string,
 	onChange: (value: string) => void,
 	label: string,
-	chordConfig: ChordCompletionConfig = defaultChordCompletionConfig
+	chordConfig: ChordCompletionConfig = defaultChordCompletionConfig,
+	options: ChordProEditorOptions = {}
 ): ChordProEditorController {
 	let wrapSelection: { from: number; to: number } | null = null;
 	let forceDirectives = false;
@@ -314,6 +321,7 @@ export function createChordProEditor(
 	const view = new EditorView({
 		state: EditorState.create({
 			doc: initialValue,
+			selection: { anchor: Math.max(0, Math.min(options.initialCursor ?? 0, initialValue.length)) },
 			extensions: [
 				minimalSetup,
 				EditorView.contentAttributes.of({ 'aria-label': label }),
@@ -322,20 +330,27 @@ export function createChordProEditor(
 						{
 							key: 'Tab',
 							run(view) {
-								if (!pendingTab) return false;
-								const openingLine = view.state.doc.lineAt(pendingTab.openingFrom);
-								const closingBrace = view.state
-									.sliceDoc(pendingTab.openingFrom, openingLine.to)
-									.indexOf('}');
+								if (!view.state.selection.main.empty) return false;
 								const cursor = view.state.selection.main.head;
-								if (
-									closingBrace < 0 ||
-									cursor < pendingTab.openingFrom ||
-									cursor > pendingTab.openingFrom + closingBrace
-								)
-									return false;
-								view.dispatch({ selection: { anchor: pendingTab.target } });
-								pendingTab = null;
+								if (pendingTab) {
+									const openingLine = view.state.doc.lineAt(pendingTab.openingFrom);
+									const closingBrace = view.state
+										.sliceDoc(pendingTab.openingFrom, openingLine.to)
+										.indexOf('}');
+									if (
+										closingBrace >= 0 &&
+										cursor >= pendingTab.openingFrom &&
+										cursor <= pendingTab.openingFrom + closingBrace
+									) {
+										view.dispatch({ selection: { anchor: pendingTab.target } });
+										pendingTab = null;
+										return true;
+									}
+									pendingTab = null;
+								}
+								const next = tabDestination(view.state.doc.toString(), cursor);
+								if (next === null) return false;
+								view.dispatch({ selection: { anchor: next } });
 								return true;
 							}
 						}
@@ -372,6 +387,7 @@ export function createChordProEditor(
 		startCompletion(view);
 	}
 	view.dom.addEventListener('contextmenu', contextMenu);
+	if (options.autoFocus) view.focus();
 
 	return {
 		setValue(value) {

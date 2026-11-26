@@ -22,7 +22,7 @@
 		type FacetSelection
 	} from '#lib/client/library.js';
 	import { locale, t } from '#lib/client/i18n.js';
-	import { formatChordPro } from '#lib/client/chordpro-language.js';
+	import { formatChordPro, insertDirective } from '#lib/client/chordpro-language.js';
 	import { notify, notifyTransient } from '#lib/client/notifications.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
 	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
@@ -73,6 +73,7 @@
 	let scrollFrame: number | null = null;
 	let touchStart: { x: number; y: number } | null = null;
 	let gestureStart: { x: number; y: number } | null = null;
+	const newSongDraft = insertDirective('title');
 	function focusOnMount(node: HTMLElement) {
 		node.focus();
 	}
@@ -193,7 +194,7 @@
 		modalId = null;
 		creating = true;
 		modalMode = 'edit';
-		content = '{title: }\n{key: C}\n\n[C]';
+		content = newSongDraft.text;
 		savedContent = content;
 		modalOpen = true;
 		pendingSongId = null;
@@ -838,6 +839,8 @@
 					<ChordProEditor
 						value={content}
 						label={t($locale, 'content')}
+						initialCursor={creating ? newSongDraft.cursor : undefined}
+						autoFocus={creating}
 						onChange={(value) => (content = value)}
 					/>
 					<div class="actions">

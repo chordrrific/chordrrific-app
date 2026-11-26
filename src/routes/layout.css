@@ -1250,9 +1250,24 @@ body:has(.library-shell) > div > main {
 	border-left-color: #f3f7f4 !important;
 }
 :root[data-theme='dark'] .chordpro-editor .cm-chordpro-environment-match {
-	background: #ffd166;
-	color: #17231c !important;
-	outline-color: #f5a923;
+	background: #ffe19a;
+	outline-color: #e8a83a;
+}
+:root[data-theme='dark'] .chordpro-editor .cm-chordpro-environment-match,
+:root[data-theme='dark'] .chordpro-editor .cm-chordpro-environment-match * {
+	color: #14241c !important;
+}
+:root[data-theme='dark'] .chordpro-editor .cm-tooltip {
+	border: 1px solid #526759;
+	background: #24332d;
+	color: #e5eee9;
+}
+:root[data-theme='dark'] .chordpro-editor .cm-tooltip-autocomplete ul li {
+	color: #e5eee9;
+}
+:root[data-theme='dark'] .chordpro-editor .cm-tooltip-autocomplete ul li[aria-selected] {
+	background: #3b7258;
+	color: #fff;
 }
 :root[data-theme='dark'] .chordpro-editor .cm-content ::selection,
 :root[data-theme='dark'] .chordpro-editor .cm-content::selection {

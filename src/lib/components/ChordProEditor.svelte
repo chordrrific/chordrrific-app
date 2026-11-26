@@ -10,11 +10,15 @@
 		value,
 		onChange,
 		label,
+		initialCursor,
+		autoFocus = false,
 		chordCompletionConfig = defaultChordCompletionConfig
 	} = $props<{
 		value: string;
 		onChange: (value: string) => void;
 		label: string;
+		initialCursor?: number;
+		autoFocus?: boolean;
 		chordCompletionConfig?: ChordCompletionConfig;
 	}>();
 	let host: HTMLDivElement;
@@ -26,7 +30,10 @@
 		void import('#lib/client/chordpro-codemirror.js')
 			.then(({ createChordProEditor }) => {
 				if (active) {
-					controller = createChordProEditor(host, value, onChange, label, chordCompletionConfig);
+					controller = createChordProEditor(host, value, onChange, label, chordCompletionConfig, {
+						initialCursor,
+						autoFocus
+					});
 				}
 			})
 			.catch(() => {
@@ -43,12 +50,19 @@
 		controller?.setLabel(label);
 		controller?.setChordCompletionConfig(chordCompletionConfig);
 	});
+	function focusFallback(node: HTMLTextAreaElement) {
+		if (!autoFocus) return;
+		node.focus();
+		const cursor = Math.max(0, Math.min(initialCursor ?? 0, value.length));
+		node.setSelectionRange(cursor, cursor);
+	}
 </script>
 
 <div class="chordpro-editor" bind:this={host}></div>
 {#if loadError}
 	<textarea
 		{value}
+		use:focusFallback
 		oninput={(event) => onChange(event.currentTarget.value)}
 		spellcheck="false"
 		aria-label={label}></textarea>
