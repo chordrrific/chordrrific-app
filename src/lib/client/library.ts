@@ -101,14 +101,21 @@ export function cycleFacet(
 	return nextMode ? [...base, { key, value, mode: nextMode }] : [...base];
 }
 
+export function soleDisplayFilter(
+	active: readonly FacetSelection[],
+	search: string
+): FacetSelection | null {
+	return active.length === 1 && !search.trim() ? active[0] : null;
+}
+
 export function soleCollectionFilter(
 	active: readonly FacetSelection[],
 	search: string,
 	collections: readonly Collection[]
 ): Collection | null {
-	if (active.length !== 1 || search.trim()) return null;
-	const filter = active[0];
-	if (filter.key !== 'collection' || filter.mode !== 'include' || !filter.value) return null;
+	const filter = soleDisplayFilter(active, search);
+	if (!filter || filter.key !== 'collection' || filter.mode !== 'include' || !filter.value)
+		return null;
 	return (
 		collections.find(
 			(collection) => collection.name.toLocaleLowerCase() === filter.value?.toLocaleLowerCase()
@@ -155,5 +162,15 @@ export function visibleLibrarySongs(
 }
 
 export function displayAuthor(metadata: SongMetadata): string | undefined {
-	return metadata.artist[0] ?? metadata.composer[0] ?? metadata.lyricist[0];
+	return displayAuthorFacet(metadata)?.value;
+}
+
+export function displayAuthorFacet(
+	metadata: SongMetadata
+): { key: 'artist' | 'composer' | 'lyricist'; value: string } | null {
+	for (const key of ['artist', 'composer', 'lyricist'] as const) {
+		const value = metadata[key][0];
+		if (value) return { key, value };
+	}
+	return null;
 }

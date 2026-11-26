@@ -833,11 +833,22 @@ body:has(.library-shell) > div > main {
 .library-results-heading h1 {
 	margin: 0;
 }
-.library-results-heading .collection-heading {
+.library-results-heading .filter-value-heading {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.library-results-heading .filter-value-heading span {
+	display: block;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+}
+.library-results-heading .filter-value-heading.collection-chip,
+.library-results-heading .filter-value-heading.tag-chip {
+	font-size: 1.5rem;
+	padding: 0.25rem 0.65rem;
 }
 .library-results-heading .muted {
 	flex: none;
@@ -955,9 +966,6 @@ body:has(.library-shell) > div > main {
 	background: transparent;
 	text-align: left;
 }
-.song-card-main:hover {
-	background: transparent;
-}
 .song-card-title {
 	max-width: 100%;
 	padding-right: 2rem;
@@ -965,13 +973,46 @@ body:has(.library-shell) > div > main {
 	font-size: 1.12rem;
 	line-height: 1.25;
 }
+.song-card-title-button,
+.song-card-meta-button {
+	max-width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	text-align: left;
+}
+.song-card-title-button {
+	display: block;
+	flex: 1;
+	font-weight: 700;
+}
+.song-card-meta-button {
+	font-weight: 400;
+}
+.song-card-title-button:hover,
+.song-card-meta-button:hover {
+	background: transparent;
+	text-decoration: underline;
+}
+.song-card-chip-button:hover {
+	text-decoration: underline;
+}
+.song-card-chip-button.tag-chip:hover {
+	background: var(--chip);
+}
 .song-card-author {
 	color: var(--accent);
 	font-size: 0.9rem;
 }
 .song-card-detail {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.2rem;
 	color: var(--muted);
 	font-size: 0.83rem;
+}
+.song-card-detail .song-card-meta-button {
+	color: var(--muted);
 }
 .song-select-toggle {
 	position: absolute;
@@ -1450,6 +1491,10 @@ body:has(.library-shell) > div > main {
 		gap: 0.35rem;
 	}
 	.library-results-heading h1 {
+		font-size: 1.25rem;
+	}
+	.library-results-heading .filter-value-heading.collection-chip,
+	.library-results-heading .filter-value-heading.tag-chip {
 		font-size: 1.25rem;
 	}
 	.library-results-heading .muted {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { songMetadata } from '#lib/core/song-metadata.js';
-	import { displayAuthor } from '#lib/client/library.js';
+	import { displayAuthorFacet, type FacetKey } from '#lib/client/library.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import Icon from './Icon.svelte';
@@ -18,7 +18,8 @@
 		onEdit,
 		onDelete,
 		onTags,
-		onCollections
+		onCollections,
+		onFilter
 	} = $props<{
 		song: Song;
 		selected: boolean;
@@ -34,9 +35,10 @@
 		onDelete: () => void;
 		onTags: () => void;
 		onCollections: () => void;
+		onFilter: (key: FacetKey, value: string) => void;
 	}>();
 	let metadata = $derived(songMetadata(song.content));
-	let author = $derived(displayAuthor(metadata));
+	let author = $derived(displayAuthorFacet(metadata));
 </script>
 
 <article
@@ -73,26 +75,62 @@
 	>
 		{#if selected}<Icon name="check" size={16} />{/if}
 	</button>
-	<button
-		type="button"
-		class="song-card-main"
-		onclick={onOpen}
-		aria-label={`${t($locale, 'view')}: ${song.title}`}
-	>
-		<strong class="song-card-title">{song.title}</strong>
-		{#if author}<span class="song-card-author">{author}</span>{/if}
-		{#if metadata.album[0] || metadata.year[0]}<span class="song-card-detail">
-				{metadata.album[0] ?? ''}{metadata.album[0] && metadata.year[0] ? ' · ' : ''}{metadata
-					.year[0] ?? ''}
-			</span>{/if}
-	</button>
+	<div class="song-card-main">
+		<button
+			type="button"
+			class="song-card-title song-card-title-button"
+			onclick={onOpen}
+			aria-label={`${t($locale, 'view')}: ${song.title}`}
+		>
+			{song.title}
+		</button>
+		{#if author}<button
+				type="button"
+				class="song-card-author song-card-meta-button"
+				onclick={() => onFilter(author.key, author.value)}
+				aria-label={`${t($locale, 'addFilter')}: ${t($locale, author.key)} ${author.value}`}
+			>
+				{author.value}
+			</button>{/if}
+		{#if metadata.album[0] || metadata.year[0]}<div class="song-card-detail">
+				{#if metadata.album[0]}<button
+						type="button"
+						class="song-card-meta-button"
+						onclick={() => onFilter('album', metadata.album[0])}
+						aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'album')} ${metadata.album[0]}`}
+					>
+						{metadata.album[0]}
+					</button>{/if}
+				{#if metadata.album[0] && metadata.year[0]}<span aria-hidden="true">·</span>{/if}
+				{#if metadata.year[0]}<button
+						type="button"
+						class="song-card-meta-button"
+						onclick={() => onFilter('year', metadata.year[0])}
+						aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'year')} ${metadata.year[0]}`}
+					>
+						{metadata.year[0]}
+					</button>{/if}
+			</div>{/if}
+	</div>
 	{#if song.collections.length}<div class="song-card-collections">
-			{#each song.collections as link (link.collectionId)}<span class="collection-chip">
+			{#each song.collections as link (link.collectionId)}<button
+					type="button"
+					class="collection-chip song-card-chip-button"
+					onclick={() => onFilter('collection', link.collection.name)}
+					aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'collection')} ${link.collection.name}`}
+				>
 					{link.collection.name}
-				</span>{/each}
+				</button>{/each}
 		</div>{/if}
 	{#if metadata.tag.length}<div class="song-card-tags">
-			{#each metadata.tag as tag (tag)}<span class="tag-chip">{tag}</span>{/each}
+			{#each metadata.tag as tag (tag)}<button
+					type="button"
+					class="tag-chip song-card-chip-button"
+					onclick={() => onFilter('tag', tag)}
+					aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'tag')} ${tag}`}
+				>
+					{tag}
+				</button>{/each}
 		</div>{/if}
 	<div class="song-card-actions">
 		<button

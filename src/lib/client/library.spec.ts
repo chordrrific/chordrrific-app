@@ -3,8 +3,10 @@ import {
 	createSongSearch,
 	cycleFacet,
 	displayAuthor,
+	displayAuthorFacet,
 	libraryFacets,
 	soleCollectionFilter,
+	soleDisplayFilter,
 	visibleLibrarySongs
 } from './library.js';
 import { songMetadata } from '#lib/core/song-metadata.js';
@@ -63,6 +65,8 @@ describe('library facets', () => {
 	});
 	it('recognizes only an unambiguous single collection view', () => {
 		const selected = [{ key: 'collection', value: 'Concierto', mode: 'include' }] as const;
+		expect(soleDisplayFilter(selected, '')).toEqual(selected[0]);
+		expect(soleDisplayFilter(selected, 'Alegría')).toBeNull();
 		expect(soleCollectionFilter(selected, '', [collection])).toBe(collection);
 		expect(soleCollectionFilter(selected, '  ', [collection])).toBe(collection);
 		expect(soleCollectionFilter(selected, 'Alegría', [collection])).toBeNull();
@@ -79,6 +83,17 @@ describe('library facets', () => {
 		expect(
 			soleCollectionFilter([{ key: 'collection', mode: 'include' }], '', [collection])
 		).toBeNull();
+		expect(soleDisplayFilter([{ key: 'artist', mode: 'exclude' }], '')).toEqual({
+			key: 'artist',
+			mode: 'exclude'
+		});
+		expect(
+			soleDisplayFilter([...selected, { key: 'tag', value: 'Pop', mode: 'include' }], '')
+		).toBeNull();
+		expect(displayAuthorFacet(songMetadata(songs[2].content))).toEqual({
+			key: 'composer',
+			value: 'Bach'
+		});
 	});
 	it('matches song titles regardless of accents and letter case', () => {
 		const titled = { ...songs[0], title: 'Título' };

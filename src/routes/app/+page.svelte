@@ -14,6 +14,7 @@
 		cycleFacet,
 		libraryFacets,
 		soleCollectionFilter,
+		soleDisplayFilter,
 		visibleLibrarySongs,
 		type FacetKey,
 		type FacetSelection
@@ -74,7 +75,13 @@
 
 	let facets = $derived(libraryFacets(songs));
 	let searchIndex = $derived(createSongSearch(songs));
+	let singleFilter = $derived(soleDisplayFilter(filters, search));
 	let singleCollection = $derived(soleCollectionFilter(filters, search, collections));
+	let singleFilterLabel = $derived(
+		singleFilter
+			? `${singleFilter.mode === 'exclude' ? '− ' : ''}${singleFilter.value ?? t($locale, singleFilter.key)}`
+			: ''
+	);
 	let visibleSongs = $derived(
 		visibleLibrarySongs(songs, filters, search, collections, searchIndex)
 	);
@@ -131,6 +138,12 @@
 		filters = cycleFacet(filters, key, value, additive);
 		selectedIds = [];
 		if (!additive && window.innerWidth <= 800) sidebarOpen = false;
+	}
+	function filterFromCard(key: FacetKey, value: string) {
+		filters = [{ key, value, mode: 'include' }];
+		search = '';
+		selectedIds = [];
+		sidebarOpen = false;
 	}
 	function togglePin(key: FacetKey) {
 		pinned = pinned.includes(key) ? pinned.filter((item) => item !== key) : [...pinned, key];
@@ -642,9 +655,14 @@
 			>
 				<Icon name="menu" />
 			</button>
-			{#if singleCollection}
-				<h1 class="collection-heading" title={singleCollection.name}>
-					{singleCollection.name}
+			{#if singleFilter}
+				<h1
+					class="filter-value-heading"
+					class:collection-chip={singleFilter.key === 'collection'}
+					class:tag-chip={singleFilter.key === 'tag'}
+					title={singleFilterLabel}
+				>
+					<span>{singleFilterLabel}</span>
 				</h1>
 				<span class="muted">{visibleSongs.length}</span>
 			{:else}
@@ -718,6 +736,7 @@
 							onDelete={() => deleteSongs([song.id])}
 							onTags={() => openMembership('tag', [song.id])}
 							onCollections={() => openMembership('collection', [song.id])}
+							onFilter={filterFromCard}
 						/>{/each}
 				</div>
 			{:else}<p class="empty-library">
