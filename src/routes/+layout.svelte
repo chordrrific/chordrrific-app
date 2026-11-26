@@ -111,11 +111,13 @@
 					<Icon name="user" />
 				</button>
 				{#if openMenu === 'user'}<div class="header-dropdown">
-						<span class="menu-email">{data.user.email}</span><a
+						<a
+							class="menu-email"
 							href={resolve('/app/settings')}
+							aria-label={`${t($locale, 'settings')}: ${data.user.email}`}
 							onclick={() => (openMenu = null)}
 						>
-							{t($locale, 'settings')}
+							{data.user.email}
 						</a>{#if data.user.isAdmin}<a
 								href={resolve('/app/admin')}
 								onclick={() => (openMenu = null)}

@@ -579,8 +579,8 @@ button:hover,
 	background: var(--soft);
 	text-decoration: none;
 }
-.menu-email {
-	color: var(--muted);
+.header-dropdown .menu-email {
+	color: var(--accent);
 	font-size: 0.8rem;
 	overflow-wrap: anywhere;
 	border-bottom: 1px solid var(--border);
