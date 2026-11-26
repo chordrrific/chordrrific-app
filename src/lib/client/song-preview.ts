@@ -10,7 +10,8 @@ import {
 
 export type { Notation } from './viewer-music.js';
 import type { Notation } from './viewer-music.js';
-export type ChorusMode = 'label' | 'expanded' | 'hidden';
+export type { ChorusMode } from '#lib/core/viewer-preferences.js';
+import type { ChorusMode } from '#lib/core/viewer-preferences.js';
 
 export interface PreviewSegment {
 	chord: string;

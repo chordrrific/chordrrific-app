@@ -1186,6 +1186,29 @@ body:has(.library-shell) > div > main {
 	height: 2.5rem;
 	padding: 0;
 }
+.viewer-control-button.pinned {
+	border-color: var(--accent);
+}
+.viewer-pin-button {
+	position: absolute;
+	top: -0.38rem;
+	left: -0.38rem;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	width: 1.45rem;
+	height: 1.45rem;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--surface);
+	color: var(--muted);
+}
+.viewer-pin-button:hover,
+.viewer-pin-button.active {
+	background: var(--soft);
+	color: var(--accent);
+}
 .viewer-tone-button,
 .viewer-notation-button {
 	position: relative;
@@ -1230,11 +1253,22 @@ body:has(.library-shell) > div > main {
 }
 .viewer-original-reset {
 	width: 100%;
-	margin-bottom: 0.5rem;
 	border: 0;
 	background: transparent;
 	color: var(--ink);
 	font-weight: 700;
+}
+.viewer-original-row {
+	display: flex;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+.viewer-original-row .viewer-original-reset {
+	flex: 1;
+}
+.viewer-popover-pin {
+	position: static;
+	flex: none;
 }
 .viewer-tone-popover input[type='range'] {
 	width: 100%;
@@ -1288,6 +1322,25 @@ body:has(.library-shell) > div > main {
 .viewer-control-menu button:hover,
 .viewer-control-menu button.active {
 	background: var(--soft);
+}
+.viewer-chorus-option {
+	display: flex;
+	align-items: center;
+}
+.viewer-chorus-option > button:first-child {
+	flex: 1;
+}
+.viewer-control-menu .viewer-option-pin {
+	position: static;
+	flex: none;
+	width: 1.8rem;
+	height: 1.8rem;
+	padding: 0;
+	color: var(--muted);
+}
+.viewer-control-menu .viewer-option-pin.active,
+.viewer-control-menu .viewer-option-pin:hover {
+	color: var(--accent);
 }
 .song-dialog-body .viewer {
 	max-width: 100%;

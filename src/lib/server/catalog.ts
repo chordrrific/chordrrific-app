@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { cleanIds, cleanSongContent, cleanText } from '#lib/core/validation.js';
 import { titleFromChordPro } from '#lib/core/song-title.js';
 import { replaceSongTags, songMetadata } from '#lib/core/song-metadata.js';
+import { cleanSongViewerPins } from '#lib/core/viewer-preferences.js';
 import type { Prisma } from './generated/prisma/client';
 import { db } from './db';
 
@@ -60,10 +61,11 @@ export async function updateSong(ownerId: string, id: string, input: Record<stri
 	await getSong(ownerId, id);
 	const content = input.content === undefined ? undefined : cleanSongContent(input.content);
 	const title = content === undefined ? undefined : titleFromChordPro(content);
+	const pins = cleanSongViewerPins(input);
 	return db.$transaction(async (tx) => {
 		const song = await tx.song.update({
 			where: { id },
-			data: { title, content }
+			data: { title, content, ...pins }
 		});
 		if (content !== undefined) await syncSongTags(tx, ownerId, id, content);
 		return song;

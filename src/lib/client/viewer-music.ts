@@ -1,8 +1,9 @@
 import type { Song } from 'chordsheetjs';
+import type { Notation } from '#lib/core/viewer-preferences.js';
 
 type ChordSheetLibrary = typeof import('chordsheetjs');
 
-export type Notation = 'symbol' | 'solfege' | 'special-solfege' | 'number' | 'roman';
+export type { Notation } from '#lib/core/viewer-preferences.js';
 export type AccidentalPreference = '#' | 'b';
 
 export interface ViewerMusicConfig {
@@ -85,6 +86,11 @@ export function originalSongKey(library: ChordSheetLibrary, song: Song): SongKey
 
 export function transposeSongKey(key: SongKey, semitones: number): SongKey {
 	return { pitchClass: modulo(key.pitchClass + semitones), minor: key.minor };
+}
+
+export function offsetForTone(original: SongKey, targetPitchClass: number): number {
+	const upward = modulo(targetPitchClass - original.pitchClass);
+	return upward > 6 ? upward - 12 : upward;
 }
 
 export function symbolKeyName(

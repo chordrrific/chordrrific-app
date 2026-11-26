@@ -24,6 +24,50 @@ afterAll(async () => {
 });
 
 describe('SQLite integration', () => {
+	it('persists optional viewer pins per song and protects their ownership', async () => {
+		const owner = await createUser({
+			email: 'viewer-owner@example.com',
+			password: 'long-test-password-viewer'
+		});
+		const other = await createUser({
+			email: 'viewer-other@example.com',
+			password: 'long-test-password-other'
+		});
+		const song = await createSong(owner.id, { content: '{title: Viewer}\n[Am]Music' });
+		expect(song.pinnedTone).toBeNull();
+		expect(song.pinnedNotation).toBeNull();
+		expect(song.pinnedChorusMode).toBeNull();
+		await updateSong(owner.id, song.id, {
+			pinnedTone: 9,
+			pinnedNotation: 'special-solfege',
+			pinnedChorusMode: 'expanded'
+		});
+		expect(await getSong(owner.id, song.id)).toMatchObject({
+			pinnedTone: 9,
+			pinnedNotation: 'special-solfege',
+			pinnedChorusMode: 'expanded'
+		});
+		await expect(updateSong(other.id, song.id, { pinnedTone: 0 })).rejects.toMatchObject({
+			status: 404
+		});
+		await expect(updateSong(owner.id, song.id, { pinnedTone: 12 })).rejects.toThrow('Pinned tone');
+		await expect(updateSong(owner.id, song.id, { pinnedNotation: 'invalid' })).rejects.toThrow(
+			'Pinned notation'
+		);
+		await updateSong(owner.id, song.id, {
+			pinnedTone: null,
+			pinnedNotation: null,
+			pinnedChorusMode: null
+		});
+		expect(await getSong(owner.id, song.id)).toMatchObject({
+			pinnedTone: null,
+			pinnedNotation: null,
+			pinnedChorusMode: null
+		});
+		await deleteUser(owner.id);
+		await deleteUser(other.id);
+	});
+
 	it('indexes the ChordPro title and requires it on every content save', async () => {
 		const user = await createUser({
 			email: 'title@example.com',

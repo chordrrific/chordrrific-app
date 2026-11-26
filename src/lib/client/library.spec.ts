@@ -24,6 +24,9 @@ const collection: Collection = {
 };
 const songs: Song[] = [
 	{
+		pinnedTone: null,
+		pinnedNotation: null,
+		pinnedChorusMode: null,
 		id: 'a',
 		title: 'A',
 		content: '{title: A}\n{artist: Amaral}\n{tag: Pop}',
@@ -31,13 +34,25 @@ const songs: Song[] = [
 		collections: [{ collectionId: 'set', collection }]
 	},
 	{
+		pinnedTone: null,
+		pinnedNotation: null,
+		pinnedChorusMode: null,
 		id: 'b',
 		title: 'B',
 		content: '{title: B}\n{artist: Mecano}\n{tag: Pop}',
 		tags: [],
 		collections: [{ collectionId: 'set', collection }]
 	},
-	{ id: 'c', title: 'C', content: '{title: C}\n{composer: Bach}', tags: [], collections: [] }
+	{
+		id: 'c',
+		title: 'C',
+		content: '{title: C}\n{composer: Bach}',
+		pinnedTone: null,
+		pinnedNotation: null,
+		pinnedChorusMode: null,
+		tags: [],
+		collections: []
+	}
 ];
 
 describe('library facets', () => {

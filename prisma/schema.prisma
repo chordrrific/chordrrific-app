@@ -45,15 +45,18 @@ model Session {
 }
 
 model Song {
-  id          String           @id @default(cuid())
-  ownerId     String
-  title       String
-  content     String
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  collections CollectionSong[]
-  tags        SongTag[]
+  id               String           @id @default(cuid())
+  ownerId          String
+  title            String
+  content          String
+  pinnedTone       Int?
+  pinnedNotation   String?
+  pinnedChorusMode String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  owner            User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collections      CollectionSong[]
+  tags             SongTag[]
 
   @@index([ownerId, title])
 }

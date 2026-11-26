@@ -28,6 +28,7 @@
 	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
+	import type { SongViewerPins, SongViewerPinUpdate } from '#lib/core/viewer-preferences.js';
 	import type { Collection, Song } from '#lib/client/types.js';
 	import SongViewer from '#lib/components/SongViewer.svelte';
 	import ChordProEditor from '#lib/components/ChordProEditor.svelte';
@@ -432,6 +433,22 @@
 	async function saveSong(event: SubmitEvent) {
 		event.preventDefault();
 		if (await persistSong()) modalMode = 'view';
+	}
+	async function updateViewerPins(patch: SongViewerPinUpdate): Promise<boolean> {
+		const id = modalId;
+		if (!id) return false;
+		try {
+			const updated = await request<SongViewerPins>(`/api/songs/${id}`, 'PATCH', patch);
+			songs = songs.map((song) => (song.id === id ? { ...song, ...updated } : song));
+			return true;
+		} catch (cause) {
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
+			return false;
+		}
 	}
 	async function saveAndNavigate() {
 		const target = pendingSongId;
@@ -870,7 +887,10 @@
 						</button>
 					</div>
 				</form>
-			{:else if modalSong}{#key modalSong.id}<SongViewer content={modalSong.content} />{/key}{/if}
+			{:else if modalSong}{#key `${modalSong.id}:${modalSong.content}`}<SongViewer
+						song={modalSong}
+						onPinChange={updateViewerPins}
+					/>{/key}{/if}
 		</div>
 	</div>
 {/if}

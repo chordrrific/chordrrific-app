@@ -1,3 +1,5 @@
+import type { SongViewerPins } from '#lib/core/viewer-preferences.js';
+
 export interface User {
 	id: string;
 	email: string;
@@ -18,7 +20,7 @@ export interface Collection {
 	name: string;
 	songs: CollectionEntry[];
 }
-export interface Song {
+export interface Song extends SongViewerPins {
 	id: string;
 	title: string;
 	content: string;
