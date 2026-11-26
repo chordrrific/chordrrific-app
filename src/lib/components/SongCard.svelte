@@ -32,6 +32,11 @@
 					.year[0] ?? ''}
 			</span>{/if}
 	</button>
+	{#if song.collections.length}<div class="song-card-collections">
+			{#each song.collections as link (link.collectionId)}<span class="collection-chip">
+					{link.collection.name}
+				</span>{/each}
+		</div>{/if}
 	{#if metadata.tag.length}<div class="song-card-tags">
 			{#each metadata.tag as tag (tag)}<span class="tag-chip">{tag}</span>{/each}
 		</div>{/if}
