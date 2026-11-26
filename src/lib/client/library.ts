@@ -101,6 +101,21 @@ export function cycleFacet(
 	return nextMode ? [...base, { key, value, mode: nextMode }] : [...base];
 }
 
+export function soleCollectionFilter(
+	active: readonly FacetSelection[],
+	search: string,
+	collections: readonly Collection[]
+): Collection | null {
+	if (active.length !== 1 || search.trim()) return null;
+	const filter = active[0];
+	if (filter.key !== 'collection' || filter.mode !== 'include' || !filter.value) return null;
+	return (
+		collections.find(
+			(collection) => collection.name.toLocaleLowerCase() === filter.value?.toLocaleLowerCase()
+		) ?? null
+	);
+}
+
 export function visibleLibrarySongs(
 	songs: readonly Song[],
 	active: readonly FacetSelection[],

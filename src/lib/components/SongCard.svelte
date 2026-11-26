@@ -4,9 +4,30 @@
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import Icon from './Icon.svelte';
-	let { song, selected, onOpen, onSelect, onEdit, onDelete, onTags, onCollections } = $props<{
+	let {
+		song,
+		selected,
+		reorderable,
+		reorderDisabled,
+		dragging,
+		dropTarget,
+		onReorderStart,
+		onReorderKey,
+		onOpen,
+		onSelect,
+		onEdit,
+		onDelete,
+		onTags,
+		onCollections
+	} = $props<{
 		song: Song;
 		selected: boolean;
+		reorderable: boolean;
+		reorderDisabled: boolean;
+		dragging: boolean;
+		dropTarget: boolean;
+		onReorderStart: (event: PointerEvent) => void;
+		onReorderKey: (delta: number) => void;
 		onOpen: (event: MouseEvent) => void;
 		onSelect: () => void;
 		onEdit: () => void;
@@ -18,7 +39,30 @@
 	let author = $derived(displayAuthor(metadata));
 </script>
 
-<article class="song-card" class:selected>
+<article
+	class="song-card"
+	class:selected
+	class:reorderable
+	class:dragging
+	class:drop-target={dropTarget}
+	data-song-id={reorderable ? song.id : undefined}
+>
+	{#if reorderable}<button
+			type="button"
+			class="song-drag-handle"
+			disabled={reorderDisabled}
+			onpointerdown={onReorderStart}
+			onkeydown={(event) => {
+				if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+				event.preventDefault();
+				event.stopPropagation();
+				onReorderKey(event.key === 'ArrowUp' ? -1 : 1);
+			}}
+			aria-label={`${t($locale, 'reorderSong')}: ${song.title}`}
+			title={t($locale, 'reorderSong')}
+		>
+			<Icon name="grip" size={20} />
+		</button>{/if}
 	<button
 		type="button"
 		class="song-select-toggle"

@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { request } from '#lib/client/api.js';
-	import { changedMembershipIds } from '#lib/client/catalog.js';
+	import {
+		changedMembershipIds,
+		collectionSongIds,
+		moved,
+		movedTo,
+		withSongOrder
+	} from '#lib/client/catalog.js';
 	import { catalogRevision } from '#lib/client/catalog-state.js';
 	import {
 		createSongSearch,
 		cycleFacet,
 		libraryFacets,
+		soleCollectionFilter,
 		visibleLibrarySongs,
 		type FacetKey,
 		type FacetSelection
@@ -47,6 +54,18 @@
 	let membershipBulk = $state(false);
 	let membershipOperation = $state<'add' | 'remove'>('add');
 	let busy = $state(false);
+	let reordering = $state(false);
+	let pendingOrder = $state<{ collectionId: string; ids: string[] } | null>(null);
+	let drag = $state<{
+		pointerId: number;
+		songId: string;
+		targetId: string | null;
+		collectionId: string;
+		ids: string[];
+	} | null>(null);
+	let scrollElement: HTMLDivElement;
+	let dragPointer: { x: number; y: number } | null = null;
+	let scrollFrame: number | null = null;
 	let touchStart: { x: number; y: number } | null = null;
 	let gestureStart: { x: number; y: number } | null = null;
 	function focusOnMount(node: HTMLElement) {
@@ -55,9 +74,19 @@
 
 	let facets = $derived(libraryFacets(songs));
 	let searchIndex = $derived(createSongSearch(songs));
+	let singleCollection = $derived(soleCollectionFilter(filters, search, collections));
 	let visibleSongs = $derived(
 		visibleLibrarySongs(songs, filters, search, collections, searchIndex)
 	);
+	let displayedSongs = $derived.by(() => {
+		if (!pendingOrder || pendingOrder.collectionId !== singleCollection?.id) return visibleSongs;
+		const byId = new Map(visibleSongs.map((song) => [song.id, song]));
+		const ordered = pendingOrder.ids.flatMap((id) => {
+			const song = byId.get(id);
+			return song ? [song] : [];
+		});
+		return ordered.length === visibleSongs.length ? ordered : visibleSongs;
+	});
 	let modalSong = $derived(songs.find((song) => song.id === modalId));
 	let modalIndex = $derived(visibleSongs.findIndex((song) => song.id === modalId));
 	let existingNames = $derived(
@@ -91,7 +120,11 @@
 		} catch {
 			pinned = [];
 		}
-		return catalogRevision.subscribe(() => void loadCatalog());
+		const unsubscribe = catalogRevision.subscribe(() => void loadCatalog());
+		return () => {
+			unsubscribe();
+			cancelDrag();
+		};
 	});
 
 	function chooseFacet(key: FacetKey, value: string | undefined, additive: boolean) {
@@ -111,6 +144,7 @@
 	}
 	function touchBegin(event: TouchEvent) {
 		if (window.innerWidth > 800 || modalOpen) return;
+		if (event.target instanceof Element && event.target.closest('.song-drag-handle')) return;
 		const touch = event.touches[0];
 		if (touch && (sidebarOpen || touch.clientX < 40))
 			touchStart = { x: touch.clientX, y: touch.clientY };
@@ -207,6 +241,10 @@
 	}
 	function keydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
+			if (drag) {
+				cancelDrag();
+				return;
+			}
 			if (pendingExit) {
 				if (!busy) pendingExit = null;
 			} else if (pendingSongId) {
@@ -243,6 +281,100 @@
 		selectedIds = selectedIds.includes(id)
 			? selectedIds.filter((selectedId) => selectedId !== id)
 			: [...selectedIds, id];
+	}
+	function dragTargetAt(x: number, y: number): string | null {
+		const element = document.elementFromPoint(x, y);
+		if (!(element instanceof Element) || !scrollElement?.contains(element)) return null;
+		return element.closest<HTMLElement>('[data-song-id]')?.dataset.songId ?? null;
+	}
+	function updateDragTarget(x: number, y: number) {
+		if (!drag) return;
+		const targetId = dragTargetAt(x, y);
+		if (targetId !== drag.targetId) drag = { ...drag, targetId };
+	}
+	function autoScrollDrag() {
+		if (!drag || !dragPointer || !scrollElement) return;
+		const rect = scrollElement.getBoundingClientRect();
+		const { x, y } = dragPointer;
+		const edge = 48;
+		const speed =
+			y >= rect.top && y < rect.top + edge
+				? -10
+				: y <= rect.bottom && y > rect.bottom - edge
+					? 10
+					: 0;
+		if (speed && x >= rect.left && x <= rect.right) {
+			scrollElement.scrollTop += speed;
+			updateDragTarget(x, y);
+		}
+		scrollFrame = requestAnimationFrame(autoScrollDrag);
+	}
+	function cancelDrag() {
+		if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
+		scrollFrame = null;
+		dragPointer = null;
+		drag = null;
+	}
+	function startDrag(event: PointerEvent, songId: string) {
+		if ((event.pointerType === 'mouse' && event.button !== 0) || !singleCollection || reordering)
+			return;
+		const ids = collectionSongIds(singleCollection);
+		if (ids.length < 2) return;
+		event.preventDefault();
+		(event.currentTarget as HTMLButtonElement).setPointerCapture(event.pointerId);
+		dragPointer = { x: event.clientX, y: event.clientY };
+		drag = {
+			pointerId: event.pointerId,
+			songId,
+			targetId: null,
+			collectionId: singleCollection.id,
+			ids
+		};
+		scrollFrame = requestAnimationFrame(autoScrollDrag);
+	}
+	function moveDrag(event: PointerEvent) {
+		if (!drag || event.pointerId !== drag.pointerId) return;
+		dragPointer = { x: event.clientX, y: event.clientY };
+		updateDragTarget(event.clientX, event.clientY);
+	}
+	function endDrag(event: PointerEvent) {
+		if (!drag || event.pointerId !== drag.pointerId) return;
+		const active = drag;
+		const targetId = dragTargetAt(event.clientX, event.clientY);
+		cancelDrag();
+		if (!targetId || singleCollection?.id !== active.collectionId) return;
+		void saveCollectionOrder(active.collectionId, movedTo(active.ids, active.songId, targetId));
+	}
+	function keyReorder(songId: string, delta: number) {
+		if (!singleCollection || reordering) return;
+		const ids = collectionSongIds(singleCollection);
+		const next = moved(ids, ids.indexOf(songId), delta);
+		if (next !== ids) void saveCollectionOrder(singleCollection.id, next);
+	}
+	async function saveCollectionOrder(collectionId: string, ids: string[]) {
+		const collection = collections.find((item) => item.id === collectionId);
+		if (!collection || reordering || !withSongOrder(collection, ids)) return;
+		const current = collectionSongIds(collection);
+		if (ids.every((id, index) => id === current[index])) return;
+		reordering = true;
+		pendingOrder = { collectionId, ids };
+		try {
+			await request(`/api/collections/${collectionId}/songs`, 'PUT', { songIds: ids });
+			const latest = collections.find((item) => item.id === collectionId);
+			const reordered = latest && withSongOrder(latest, ids);
+			if (reordered)
+				collections = collections.map((item) => (item.id === collectionId ? reordered : item));
+			else await loadCatalog();
+		} catch (cause) {
+			void notify(
+				'error',
+				t($locale, 'error'),
+				cause instanceof Error ? cause.message : String(cause)
+			);
+		} finally {
+			pendingOrder = null;
+			reordering = false;
+		}
 	}
 	async function persistSong(): Promise<boolean> {
 		busy = true;
@@ -435,6 +567,11 @@
 <svelte:window
 	ontouchstart={touchBegin}
 	ontouchend={touchEnd}
+	onpointermove={moveDrag}
+	onpointerup={endDrag}
+	onpointercancel={(event) => {
+		if (drag?.pointerId === event.pointerId) cancelDrag();
+	}}
 	onkeydown={keydown}
 	onbeforeunload={beforeUnload}
 />
@@ -505,13 +642,20 @@
 			>
 				<Icon name="menu" />
 			</button>
-			<h1>{t($locale, 'songs')}</h1>
-			<span class="muted">
-				{visibleSongs.length}{#if filters.length || search.trim()}&nbsp;({t(
-						$locale,
-						'filteredCount'
-					)}){/if}
-			</span>
+			{#if singleCollection}
+				<h1 class="collection-heading" title={singleCollection.name}>
+					{singleCollection.name}
+				</h1>
+				<span class="muted">{visibleSongs.length}</span>
+			{:else}
+				<h1>{t($locale, 'songs')}</h1>
+				<span class="muted">
+					{visibleSongs.length}{#if filters.length || search.trim()}&nbsp;({t(
+							$locale,
+							'filteredCount'
+						)}){/if}
+				</span>
+			{/if}
 			<button
 				class="primary new-song-button"
 				onclick={newSong}
@@ -557,11 +701,17 @@
 					<Icon name="close" size={17} />
 				</button>
 			</div>{/if}
-		<div class="song-results-scroll">
+		<div class="song-results-scroll" bind:this={scrollElement}>
 			{#if visibleSongs.length}<div class="song-grid">
-					{#each visibleSongs as song (song.id)}<SongCard
+					{#each displayedSongs as song (song.id)}<SongCard
 							{song}
 							selected={selectedIds.includes(song.id)}
+							reorderable={singleCollection !== null}
+							reorderDisabled={reordering || visibleSongs.length < 2}
+							dragging={drag?.songId === song.id}
+							dropTarget={drag?.targetId === song.id && drag?.songId !== song.id}
+							onReorderStart={(event) => startDrag(event, song.id)}
+							onReorderKey={(delta) => keyReorder(song.id, delta)}
 							onOpen={(event) => cardOpen(song, event)}
 							onSelect={() => toggleSongSelection(song.id)}
 							onEdit={() => openSong(song, 'edit')}

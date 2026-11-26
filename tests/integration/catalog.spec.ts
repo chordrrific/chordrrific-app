@@ -70,6 +70,15 @@ describe('SQLite integration', () => {
 				})
 			).map((entry) => entry.songId)
 		).toEqual([song2.id, song1.id]);
+		await setCollectionSongs(a.id, collection.id, [song1.id, song2.id]);
+		expect(
+			(
+				await db.collectionSong.findMany({
+					where: { collectionId: collection.id },
+					orderBy: { position: 'asc' }
+				})
+			).map((entry) => entry.songId)
+		).toEqual([song1.id, song2.id]);
 		expect(await listSongs(b.id)).toEqual([]);
 		await expect(getSong(b.id, song1.id)).rejects.toMatchObject({ status: 404 });
 		await expect(setCollectionSongs(b.id, collection.id, [song1.id])).rejects.toMatchObject({

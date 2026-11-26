@@ -833,7 +833,14 @@ body:has(.library-shell) > div > main {
 .library-results-heading h1 {
 	margin: 0;
 }
+.library-results-heading .collection-heading {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 .library-results-heading .muted {
+	flex: none;
 	white-space: nowrap;
 }
 .new-song-button {
@@ -897,6 +904,43 @@ body:has(.library-shell) > div > main {
 }
 .song-card.selected {
 	outline: 2px solid var(--accent);
+}
+.song-card.reorderable {
+	padding-left: 2rem;
+}
+.song-card.dragging {
+	opacity: 0.55;
+}
+.song-card.drop-target {
+	outline: 2px dashed var(--accent);
+	outline-offset: -2px;
+}
+.song-drag-handle {
+	position: absolute;
+	z-index: 2;
+	inset: 0 auto 0 0;
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	padding: 0;
+	border: 0;
+	border-right: 1px solid var(--border);
+	border-radius: 0.8rem 0 0 0.8rem;
+	background: transparent;
+	color: var(--muted);
+	cursor: grab;
+	touch-action: none;
+}
+.song-drag-handle:hover,
+.song-drag-handle:focus-visible {
+	background: var(--soft);
+	color: var(--accent);
+}
+.song-drag-handle:active {
+	cursor: grabbing;
+}
+.song-drag-handle:disabled {
+	cursor: default;
 }
 .song-card-main {
 	display: flex;
