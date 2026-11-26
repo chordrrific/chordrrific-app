@@ -445,10 +445,16 @@
 		else pendingSongId = null;
 	}
 	async function deleteSongs(ids: readonly string[]) {
+		const deletingEditedSong =
+			ids.length === 1 && ids[0] === modalId && modalMode === 'edit' && content !== savedContent;
 		if (
 			!ids.length ||
 			!(await confirmAction(
-				ids.length === 1 ? t($locale, 'confirmDelete') : t($locale, 'confirmBulkDelete'),
+				deletingEditedSong
+					? t($locale, 'confirmDeleteUnsavedSong')
+					: ids.length === 1
+						? t($locale, 'confirmDelete')
+						: t($locale, 'confirmBulkDelete'),
 				{ destructive: true }
 			))
 		)
@@ -820,6 +826,14 @@
 						title={t($locale, modalMode === 'view' ? 'edit' : 'view')}
 					>
 						<Icon name={modalMode === 'view' ? 'edit' : 'eye'} />
+					</button><button
+						class="icon-button"
+						disabled={busy || !modalSong}
+						onclick={() => modalSong && void deleteSongs([modalSong.id])}
+						aria-label={`${t($locale, 'delete')}: ${modalSong?.title ?? ''}`}
+						title={t($locale, 'delete')}
+					>
+						<Icon name="trash" />
 					</button>{/if}<button
 					class="icon-button"
 					onclick={() => requestLeaveEditor('close')}

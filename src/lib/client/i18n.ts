@@ -88,6 +88,8 @@ const strings = {
 		adminRole: 'Administrador',
 		resetPassword: 'Cambiar contraseña',
 		confirmDelete: '¿Seguro que quieres eliminarlo?',
+		confirmDeleteUnsavedSong:
+			'¿Eliminar esta canción? También se perderán los cambios sin guardar.',
 		saved: 'Guardado.',
 		deleted: 'Eliminado.',
 		error: 'Error',
@@ -229,6 +231,7 @@ const strings = {
 		adminRole: 'Administrator',
 		resetPassword: 'Change password',
 		confirmDelete: 'Are you sure you want to delete it?',
+		confirmDeleteUnsavedSong: 'Delete this song? Unsaved changes will also be lost.',
 		saved: 'Saved.',
 		deleted: 'Deleted.',
 		error: 'Error',
