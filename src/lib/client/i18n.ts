@@ -87,9 +87,9 @@ const strings = {
 		down: 'Bajar',
 		adminRole: 'Administrador',
 		resetPassword: 'Cambiar contraseña',
-		confirmDelete: '¿Seguro que quieres eliminarlo?',
+		confirmDelete: '¡Se eliminará la canción y no podrá deshacerse el cambio! ¿Está seguro?',
 		confirmDeleteUnsavedSong:
-			'¿Eliminar esta canción? También se perderán los cambios sin guardar.',
+			'¡Se eliminará la canción y no podrá deshacerse el cambio! ¿Está seguro? También se perderán los cambios sin guardar.',
 		saved: 'Guardado.',
 		deleted: 'Eliminado.',
 		error: 'Error',
@@ -232,8 +232,9 @@ const strings = {
 		down: 'Move down',
 		adminRole: 'Administrator',
 		resetPassword: 'Change password',
-		confirmDelete: 'Are you sure you want to delete it?',
-		confirmDeleteUnsavedSong: 'Delete this song? Unsaved changes will also be lost.',
+		confirmDelete: 'The song will be deleted and this cannot be undone! Are you sure?',
+		confirmDeleteUnsavedSong:
+			'The song will be deleted and this cannot be undone! Are you sure? Unsaved changes will also be lost.',
 		saved: 'Saved.',
 		deleted: 'Deleted.',
 		error: 'Error',

@@ -1731,17 +1731,18 @@ body:has(.library-shell) > div > main {
 }
 @media (max-width: 600px) {
 	.viewer-tone-popover {
+		width: min(9.5rem, calc(100vw - 2rem));
 		max-height: min(70vh, 30rem);
 		overflow-x: hidden;
 		overflow-y: auto;
 	}
 	.viewer-tone-track {
 		display: grid;
-		grid-template-columns: 1.8rem minmax(0, 1fr);
-		gap: 0.5rem;
+		grid-template-columns: 1.15rem max-content;
+		gap: 0.2rem;
 	}
 	.viewer-tone-popover input[type='range'] {
-		width: 1.8rem;
+		width: 1.15rem;
 		min-width: 0;
 		height: 22.8rem;
 		margin: 0;
@@ -1755,14 +1756,19 @@ body:has(.library-shell) > div > main {
 	}
 	.viewer-tone-option {
 		display: flex;
+		gap: 0.1rem;
 		align-items: center;
 		flex: 0 0 1.9rem;
-		justify-content: space-between;
+		justify-content: flex-start;
 	}
 	.viewer-tone-scale .viewer-tone-value {
 		width: auto;
-		flex: 1;
+		flex: 0 0 auto;
 		text-align: left;
+	}
+	.viewer-tone-scale .viewer-tone-pin {
+		width: 1.55rem;
+		flex: 0 0 1.55rem;
 	}
 }
 @media (hover: none) {
