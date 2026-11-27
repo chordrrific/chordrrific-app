@@ -27,6 +27,13 @@
 	import { confirmAction } from '#lib/client/confirmation.js';
 	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
 	import {
+		isSongSortKey,
+		songSortFields,
+		sortLibrarySongs,
+		type SongSortKey,
+		type SongSortMode
+	} from '#lib/client/song-sort.js';
+	import {
 		addMembershipNames,
 		applyTagMembership,
 		createMembershipDraft,
@@ -54,6 +61,10 @@
 	let sidebarOpen = $state(false);
 	let modifierHeld = $state(false);
 	let selectedIds = $state<string[]>([]);
+	let sortMenuOpen = $state(false);
+	let preferredSort = $state<SongSortKey>('title');
+	let collectionSortOverride = $state<{ id: string; mode: SongSortMode } | null>(null);
+	let previousCollectionId: string | null = null;
 	let modalOpen = $state(false);
 	let modalId = $state<string | null>(null);
 	let creating = $state(false);
@@ -90,6 +101,13 @@
 	let searchIndex = $derived(createSongSearch(songs));
 	let singleFilter = $derived(soleDisplayFilter(filters, search));
 	let singleCollection = $derived(soleCollectionFilter(filters, search, collections));
+	let effectiveSort = $derived<SongSortMode>(
+		singleCollection
+			? collectionSortOverride?.id === singleCollection.id
+				? collectionSortOverride.mode
+				: 'collection-order'
+			: preferredSort
+	);
 	let singleFilterLabel = $derived(
 		singleFilter
 			? `${singleFilter.mode === 'exclude' ? '− ' : ''}${singleFilter.value ?? t($locale, singleFilter.key)}`
@@ -98,17 +116,31 @@
 	let visibleSongs = $derived(
 		visibleLibrarySongs(songs, filters, search, collections, searchIndex)
 	);
+	let sortedSongs = $derived(
+		sortLibrarySongs(visibleSongs, effectiveSort, singleCollection, $locale)
+	);
 	let displayedSongs = $derived.by(() => {
-		if (!pendingOrder || pendingOrder.collectionId !== singleCollection?.id) return visibleSongs;
-		const byId = new Map(visibleSongs.map((song) => [song.id, song]));
+		if (
+			!pendingOrder ||
+			effectiveSort !== 'collection-order' ||
+			pendingOrder.collectionId !== singleCollection?.id
+		)
+			return sortedSongs;
+		const byId = new Map(sortedSongs.map((song) => [song.id, song]));
 		const ordered = pendingOrder.ids.flatMap((id) => {
 			const song = byId.get(id);
 			return song ? [song] : [];
 		});
-		return ordered.length === visibleSongs.length ? ordered : visibleSongs;
+		return ordered.length === sortedSongs.length ? ordered : sortedSongs;
 	});
 	let modalSong = $derived(songs.find((song) => song.id === modalId));
-	let modalIndex = $derived(visibleSongs.findIndex((song) => song.id === modalId));
+	let modalIndex = $derived(displayedSongs.findIndex((song) => song.id === modalId));
+	$effect(() => {
+		const currentId = singleCollection?.id ?? null;
+		if (currentId === previousCollectionId) return;
+		previousCollectionId = currentId;
+		collectionSortOverride = null;
+	});
 	let existingNames = $derived(
 		membershipKind === 'tag'
 			? [...new Set(songs.flatMap((song) => songMetadata(song.content).tag))].sort((a, b) =>
@@ -135,6 +167,8 @@
 		}
 	}
 	onMount(() => {
+		const savedSort = localStorage.getItem('chordrrific-song-sort');
+		if (isSongSortKey(savedSort)) preferredSort = savedSort;
 		try {
 			const saved = JSON.parse(localStorage.getItem('chordrrific-pinned-facets') ?? '[]');
 			if (Array.isArray(saved))
@@ -189,6 +223,7 @@
 		touchStart = null;
 	}
 	function openSong(song: Song, mode: 'view' | 'edit' = 'view') {
+		sortMenuOpen = false;
 		modalId = song.id;
 		creating = false;
 		modalMode = mode;
@@ -199,6 +234,7 @@
 		pendingExit = null;
 	}
 	function newSong() {
+		sortMenuOpen = false;
 		modalId = null;
 		creating = true;
 		modalMode = 'edit';
@@ -243,7 +279,7 @@
 		}
 	}
 	function navigateSong(delta: number) {
-		const song = visibleSongs[modalIndex + delta];
+		const song = displayedSongs[modalIndex + delta];
 		if (!song) return;
 		if (modalMode === 'edit' && content !== savedContent) {
 			pendingSongId = song.id;
@@ -281,6 +317,7 @@
 				if (!busy) pendingSongId = null;
 			} else if (membershipKind) membershipKind = null;
 			else if (modalOpen) requestLeaveEditor(modalMode === 'edit' && !creating ? 'view' : 'close');
+			else if (sortMenuOpen) sortMenuOpen = false;
 			else sidebarOpen = false;
 			return;
 		}
@@ -309,6 +346,23 @@
 			return;
 		}
 		openSong(song);
+	}
+	function chooseSort(mode: SongSortMode) {
+		if (singleCollection) collectionSortOverride = { id: singleCollection.id, mode };
+		if (mode !== 'collection-order') {
+			preferredSort = mode;
+			localStorage.setItem('chordrrific-song-sort', mode);
+		}
+		sortMenuOpen = false;
+		cancelDrag();
+	}
+	function closeSortMenuOutside(event: PointerEvent) {
+		if (
+			sortMenuOpen &&
+			event.target instanceof Element &&
+			!event.target.closest('.library-sort-control')
+		)
+			sortMenuOpen = false;
 	}
 	function toggleSongSelection(id: string) {
 		selectedIds = selectedIds.includes(id)
@@ -349,7 +403,12 @@
 		drag = null;
 	}
 	function startDrag(event: PointerEvent, songId: string) {
-		if ((event.pointerType === 'mouse' && event.button !== 0) || !singleCollection || reordering)
+		if (
+			(event.pointerType === 'mouse' && event.button !== 0) ||
+			!singleCollection ||
+			effectiveSort !== 'collection-order' ||
+			reordering
+		)
 			return;
 		const ids = collectionSongIds(singleCollection);
 		if (ids.length < 2) return;
@@ -379,7 +438,7 @@
 		void saveCollectionOrder(active.collectionId, movedTo(active.ids, active.songId, targetId));
 	}
 	function keyReorder(songId: string, delta: number) {
-		if (!singleCollection || reordering) return;
+		if (!singleCollection || effectiveSort !== 'collection-order' || reordering) return;
 		const ids = collectionSongIds(singleCollection);
 		const next = moved(ids, ids.indexOf(songId), delta);
 		if (next !== ids) void saveCollectionOrder(singleCollection.id, next);
@@ -616,6 +675,7 @@
 	ontouchstart={touchBegin}
 	ontouchend={touchEnd}
 	onpointermove={moveDrag}
+	onpointerdown={closeSortMenuOutside}
 	onpointerup={endDrag}
 	onpointercancel={(event) => {
 		if (drag?.pointerId === event.pointerId) cancelDrag();
@@ -712,17 +772,75 @@
 						)}){/if}
 				</span>
 			{/if}
-			<button
-				class="primary new-song-button"
-				onclick={newSong}
-				aria-label={t($locale, 'newSong')}
-				title={t($locale, 'newSong')}
-			>
-				<Icon name="plus" size={20} />
-			</button>
+			<div class="library-heading-actions">
+				<div class="library-sort-control">
+					<button
+						class="icon-button sort-button"
+						onclick={() => (sortMenuOpen = !sortMenuOpen)}
+						aria-label={`${t($locale, 'sortSongs')}: ${t($locale, effectiveSort === 'collection-order' ? 'collectionOrder' : effectiveSort)}`}
+						title={t($locale, 'sortSongs')}
+						aria-expanded={sortMenuOpen}
+					>
+						<Icon name="sort" size={20} />
+					</button>
+					{#if sortMenuOpen}<div
+							class="library-sort-menu"
+							role="menu"
+							tabindex="-1"
+							aria-label={t($locale, 'sortSongs')}
+						>
+							<button
+								role="menuitemradio"
+								aria-checked={effectiveSort === 'title'}
+								class:active={effectiveSort === 'title'}
+								onclick={() => chooseSort('title')}
+							>
+								{t($locale, 'title')}
+							</button>
+							{#if singleCollection}<button
+									role="menuitemradio"
+									aria-checked={effectiveSort === 'collection-order'}
+									class:active={effectiveSort === 'collection-order'}
+									onclick={() => chooseSort('collection-order')}
+								>
+									{t($locale, 'collectionOrder')}
+								</button>{/if}
+							{#each songSortFields as field (field)}<button
+									role="menuitemradio"
+									aria-checked={effectiveSort === field}
+									class:active={effectiveSort === field}
+									onclick={() => chooseSort(field)}
+								>
+									{t($locale, field)}
+								</button>{/each}
+						</div>{/if}
+				</div>
+				<button
+					class="primary new-song-button"
+					onclick={newSong}
+					aria-label={t($locale, 'newSong')}
+					title={t($locale, 'newSong')}
+				>
+					<Icon name="plus" size={20} />
+				</button>
+			</div>
 		</div>
 		{#if selectedIds.length}<div class="bulk-toolbar">
-				<strong>{selectedIds.length} {t($locale, 'selectedCount')}</strong><button
+				<div class="bulk-selection-summary">
+					<strong>{selectedIds.length} {t($locale, 'selectedCount')}</strong>
+					{#if visibleSongs.some((song) => !selectedIds.includes(song.id))}<button
+							class="icon-button"
+							onclick={() =>
+								(selectedIds = [
+									...new Set([...selectedIds, ...visibleSongs.map((song) => song.id)])
+								])}
+							aria-label={t($locale, 'selectAllVisible')}
+							title={t($locale, 'selectAllVisible')}
+						>
+							<Icon name="select-all" size={18} />
+						</button>{/if}
+				</div>
+				<button
 					class="bulk-action"
 					onclick={() => openMembership('tag', selectedIds)}
 					aria-label={t($locale, 'tags')}
@@ -759,10 +877,11 @@
 			</div>{/if}
 		<div class="song-results-scroll" bind:this={scrollElement}>
 			{#if visibleSongs.length}<div class="song-grid">
-					{#each displayedSongs as song (song.id)}<SongCard
+					{#each displayedSongs as song, index (song.id)}<SongCard
 							{song}
+							number={index + 1}
 							selected={selectedIds.includes(song.id)}
-							reorderable={singleCollection !== null}
+							reorderable={singleCollection !== null && effectiveSort === 'collection-order'}
 							reorderDisabled={reordering || visibleSongs.length < 2}
 							dragging={drag?.songId === song.id}
 							dropTarget={drag?.targetId === song.id && drag?.songId !== song.id}

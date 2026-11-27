@@ -6,6 +6,7 @@
 	import Icon from './Icon.svelte';
 	let {
 		song,
+		number,
 		selected,
 		reorderable,
 		reorderDisabled,
@@ -22,6 +23,7 @@
 		onFilter
 	} = $props<{
 		song: Song;
+		number: number;
 		selected: boolean;
 		reorderable: boolean;
 		reorderDisabled: boolean;
@@ -148,51 +150,54 @@
 					{tag}
 				</button>{/each}
 		</div>{/if}
-	<div class="song-card-actions">
-		<button
-			type="button"
-			class="icon-button"
-			onclick={onOpen}
-			aria-label={`${t($locale, 'view')}: ${song.title}`}
-			title={t($locale, 'view')}
-		>
-			<Icon name="eye" size={18} />
-		</button>
-		<button
-			type="button"
-			class="icon-button"
-			onclick={onEdit}
-			aria-label={`${t($locale, 'edit')}: ${song.title}`}
-			title={t($locale, 'edit')}
-		>
-			<Icon name="edit" size={18} />
-		</button>
-		<button
-			type="button"
-			class="icon-button"
-			onclick={onTags}
-			aria-label={`${t($locale, 'editTags')}: ${song.title}`}
-			title={t($locale, 'editTags')}
-		>
-			<Icon name="tag" size={18} />
-		</button>
-		<button
-			type="button"
-			class="icon-button"
-			onclick={onCollections}
-			aria-label={`${t($locale, 'editCollections')}: ${song.title}`}
-			title={t($locale, 'editCollections')}
-		>
-			<Icon name="folder" size={18} />
-		</button>
-		<button
-			type="button"
-			class="icon-button danger"
-			onclick={onDelete}
-			aria-label={`${t($locale, 'delete')}: ${song.title}`}
-			title={t($locale, 'delete')}
-		>
-			<Icon name="trash" size={18} />
-		</button>
+	<div class="song-card-footer">
+		<span class="song-card-number">{number}</span>
+		<div class="song-card-actions">
+			<button
+				type="button"
+				class="icon-button"
+				onclick={onOpen}
+				aria-label={`${t($locale, 'view')}: ${song.title}`}
+				title={t($locale, 'view')}
+			>
+				<Icon name="eye" size={18} />
+			</button>
+			<button
+				type="button"
+				class="icon-button"
+				onclick={onEdit}
+				aria-label={`${t($locale, 'edit')}: ${song.title}`}
+				title={t($locale, 'edit')}
+			>
+				<Icon name="edit" size={18} />
+			</button>
+			<button
+				type="button"
+				class="icon-button"
+				onclick={onTags}
+				aria-label={`${t($locale, 'editTags')}: ${song.title}`}
+				title={t($locale, 'editTags')}
+			>
+				<Icon name="tag" size={18} />
+			</button>
+			<button
+				type="button"
+				class="icon-button"
+				onclick={onCollections}
+				aria-label={`${t($locale, 'editCollections')}: ${song.title}`}
+				title={t($locale, 'editCollections')}
+			>
+				<Icon name="folder" size={18} />
+			</button>
+			<button
+				type="button"
+				class="icon-button danger"
+				onclick={onDelete}
+				aria-label={`${t($locale, 'delete')}: ${song.title}`}
+				title={t($locale, 'delete')}
+			>
+				<Icon name="trash" size={18} />
+			</button>
+		</div>
 	</div>
 </article>

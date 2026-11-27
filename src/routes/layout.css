@@ -863,13 +863,55 @@ body:has(.library-shell) > div > main {
 	flex: none;
 	white-space: nowrap;
 }
+.library-heading-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	flex: none;
+	margin-left: auto;
+}
+.library-sort-control {
+	position: relative;
+	z-index: 5;
+}
+.sort-button {
+	width: 2.4rem;
+	height: 2.4rem;
+}
+.library-sort-menu {
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	right: 0;
+	display: grid;
+	width: 12rem;
+	max-height: min(25rem, 65vh);
+	overflow-y: auto;
+	padding: 0.35rem;
+	border: 1px solid var(--border);
+	border-radius: 0.65rem;
+	background: var(--surface);
+	box-shadow: 0 12px 35px #0003;
+}
+.library-sort-menu button {
+	width: 100%;
+	padding: 0.5rem 0.65rem;
+	border: 0;
+	border-radius: 0.35rem;
+	background: transparent;
+	color: var(--ink);
+	text-align: left;
+}
+.library-sort-menu button:hover,
+.library-sort-menu button.active {
+	background: var(--soft);
+	color: var(--accent);
+}
 .new-song-button {
 	display: grid;
 	place-items: center;
 	flex: none;
 	width: 2.4rem;
 	height: 2.4rem;
-	margin-left: auto;
 	padding: 0;
 }
 .bulk-toolbar {
@@ -883,8 +925,16 @@ body:has(.library-shell) > div > main {
 	border: 1px solid var(--border);
 	border-radius: 0.65rem;
 }
-.bulk-toolbar strong {
+.bulk-selection-summary {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
 	margin-right: auto;
+}
+.bulk-selection-summary .icon-button {
+	width: 1.8rem;
+	height: 1.8rem;
+	padding: 0;
 }
 .bulk-toolbar button {
 	display: inline-flex;
@@ -1087,11 +1137,22 @@ body:has(.library-shell) > div > main {
 	font-size: 0.75rem;
 	font-weight: 650;
 }
+.song-card-footer {
+	display: flex;
+	align-items: center;
+	min-height: 2.6rem;
+	padding: 0.25rem 0.5rem 0.45rem;
+}
+.song-card-number {
+	color: var(--muted);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+}
 .song-card-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: 0.1rem;
-	padding: 0.25rem 0.5rem 0.45rem;
+	margin-left: auto;
 	opacity: 0;
 	transition: opacity 0.15s;
 }
