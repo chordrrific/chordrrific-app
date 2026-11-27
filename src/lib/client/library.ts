@@ -65,14 +65,15 @@ export function songValues(song: Song, key: FacetKey): string[] {
 
 export function libraryFacets(songs: readonly Song[]): Facet[] {
 	const keys: readonly FacetKey[] = [...metadataKeys, 'collection'];
+	const documents = songs.map((song) => ({
+		metadata: songMetadata(song.content),
+		collections: song.collections.map((link) => link.collection.name)
+	}));
 	return keys.flatMap((key) => {
 		const counts = new Map<string, FacetValue>();
 		let count = 0;
-		for (const song of songs) {
-			const values =
-				key === 'collection'
-					? song.collections.map((link) => link.collection.name)
-					: songMetadata(song.content)[key];
+		for (const document of documents) {
+			const values = key === 'collection' ? document.collections : document.metadata[key];
 			if (values.length) count += 1;
 			for (const value of new Set(values)) {
 				const normalized = value.toLocaleLowerCase();
@@ -84,6 +85,34 @@ export function libraryFacets(songs: readonly Song[]): Facet[] {
 		if (count === 0) return [];
 		const values = [...counts.values()].sort((a, b) => a.value.localeCompare(b.value));
 		return [{ key, count, values }];
+	});
+}
+
+export function contextualLibraryFacets(
+	visibleSongs: readonly Song[],
+	active: readonly FacetSelection[]
+): Facet[] {
+	const keys: readonly FacetKey[] = [...metadataKeys, 'collection'];
+	const facets = new Map(libraryFacets(visibleSongs).map((facet) => [facet.key, facet]));
+	for (const selection of active) {
+		let facet = facets.get(selection.key);
+		if (!facet) {
+			facet = { key: selection.key, count: 0, values: [] };
+			facets.set(selection.key, facet);
+		}
+		if (
+			selection.value !== undefined &&
+			!facet.values.some(
+				(entry) => entry.value.toLocaleLowerCase() === selection.value?.toLocaleLowerCase()
+			)
+		) {
+			facet.values.push({ value: selection.value, count: 0 });
+			facet.values.sort((a, b) => a.value.localeCompare(b.value));
+		}
+	}
+	return keys.flatMap((key) => {
+		const facet = facets.get(key);
+		return facet ? [facet] : [];
 	});
 }
 
@@ -108,7 +137,13 @@ export function cycleFacet(
 	value: string | undefined,
 	additive: boolean
 ): FacetSelection[] {
-	const index = active.findIndex((item) => item.key === key && item.value === value);
+	const index = active.findIndex(
+		(item) =>
+			item.key === key &&
+			(item.value === undefined || value === undefined
+				? item.value === value
+				: item.value.toLocaleLowerCase() === value.toLocaleLowerCase())
+	);
 	const current = index < 0 ? undefined : active[index];
 	const nextMode =
 		current?.mode === 'include' ? 'exclude' : current?.mode === 'exclude' ? null : 'include';

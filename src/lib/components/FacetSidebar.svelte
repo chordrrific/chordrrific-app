@@ -23,7 +23,13 @@
 		})
 	);
 	function state(key: FacetKey, value?: string): FacetSelection['mode'] | undefined {
-		return active.find((item: FacetSelection) => item.key === key && item.value === value)?.mode;
+		return active.find(
+			(item: FacetSelection) =>
+				item.key === key &&
+				(item.value === undefined || value === undefined
+					? item.value === value
+					: item.value.toLocaleLowerCase() === value.toLocaleLowerCase())
+		)?.mode;
 	}
 	function selectionAction(key: FacetKey, value?: string): string {
 		const mode = state(key, value);

@@ -11,6 +11,7 @@
 	import { catalogRevision } from '#lib/client/catalog-state.js';
 	import {
 		createSongSearch,
+		contextualLibraryFacets,
 		cycleFacet,
 		libraryFacets,
 		retainAvailableFacets,
@@ -97,7 +98,6 @@
 		node.focus();
 	}
 
-	let facets = $derived(libraryFacets(songs));
 	let searchIndex = $derived(createSongSearch(songs));
 	let singleFilter = $derived(soleDisplayFilter(filters, search));
 	let singleCollection = $derived(soleCollectionFilter(filters, search, collections));
@@ -116,6 +116,7 @@
 	let visibleSongs = $derived(
 		visibleLibrarySongs(songs, filters, search, collections, searchIndex)
 	);
+	let facets = $derived(contextualLibraryFacets(visibleSongs, filters));
 	let sortedSongs = $derived(
 		sortLibrarySongs(visibleSongs, effectiveSort, singleCollection, $locale)
 	);

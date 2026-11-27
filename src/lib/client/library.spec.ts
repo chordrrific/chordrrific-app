@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	createSongSearch,
+	contextualLibraryFacets,
 	cycleFacet,
 	displayAuthor,
 	displayAuthorFacet,
@@ -56,6 +57,59 @@ const songs: Song[] = [
 ];
 
 describe('library facets', () => {
+	it('updates counts and hides unavailable metadata after choosing a filter', () => {
+		const active = [{ key: 'artist', value: 'Amaral', mode: 'include' }] as const;
+		const visible = visibleLibrarySongs(songs, active, '', [collection]);
+		const facets = contextualLibraryFacets(visible, active);
+		expect(facets.find((facet) => facet.key === 'artist')?.values).toEqual([
+			{ value: 'Amaral', count: 1 }
+		]);
+		expect(facets.find((facet) => facet.key === 'tag')?.values).toEqual([
+			{ value: 'Pop', count: 1 }
+		]);
+		expect(facets.find((facet) => facet.key === 'collection')?.count).toBe(1);
+		expect(facets.some((facet) => facet.key === 'composer')).toBe(false);
+		const collectionFilter = [{ key: 'collection', value: 'Concierto', mode: 'include' }] as const;
+		const collectionFacets = contextualLibraryFacets(
+			visibleLibrarySongs(songs, collectionFilter, '', [collection]),
+			collectionFilter
+		);
+		expect(collectionFacets.find((facet) => facet.key === 'tag')?.values).toEqual([
+			{ value: 'Pop', count: 2 }
+		]);
+		expect(collectionFacets.some((facet) => facet.key === 'composer')).toBe(false);
+	});
+
+	it('updates facets from text search and keeps excluded filters available to undo', () => {
+		const searched = visibleLibrarySongs(songs, [], 'Bach', [collection]);
+		const textFacets = contextualLibraryFacets(searched, []);
+		expect(textFacets.map((facet) => facet.key)).toEqual(['composer']);
+		expect(textFacets[0].values).toEqual([{ value: 'Bach', count: 1 }]);
+
+		const active = [{ key: 'tag', value: 'Pop', mode: 'exclude' }] as const;
+		const excluded = visibleLibrarySongs(songs, active, '', [collection]);
+		const facets = contextualLibraryFacets(excluded, active);
+		expect(facets.find((facet) => facet.key === 'tag')).toEqual({
+			key: 'tag',
+			count: 0,
+			values: [{ value: 'Pop', count: 0 }]
+		});
+		expect(facets.find((facet) => facet.key === 'collection')).toBeUndefined();
+	});
+
+	it('keeps selected controls visible when combined filters yield no songs', () => {
+		const active = [
+			{ key: 'artist', value: 'Amaral', mode: 'include' },
+			{ key: 'composer', value: 'Bach', mode: 'include' }
+		] as const;
+		const visible = visibleLibrarySongs(songs, active, '', [collection]);
+		expect(visible).toEqual([]);
+		expect(contextualLibraryFacets(visible, active)).toEqual([
+			{ key: 'artist', count: 0, values: [{ value: 'Amaral', count: 0 }] },
+			{ key: 'composer', count: 0, values: [{ value: 'Bach', count: 0 }] }
+		]);
+	});
+
 	it('counts songs, cycles include/exclude/clear, and combines Ctrl filters', () => {
 		const artist = libraryFacets(songs).find((facet) => facet.key === 'artist');
 		expect(artist?.count).toBe(2);
@@ -82,6 +136,10 @@ describe('library facets', () => {
 		expect(cycleFacet(active, 'artist', 'Amaral', true)).toEqual([
 			active[1],
 			{ key: 'artist', value: 'Amaral', mode: 'exclude' }
+		]);
+		expect(cycleFacet(active, 'artist', 'amaral', true)).toEqual([
+			active[1],
+			{ key: 'artist', value: 'amaral', mode: 'exclude' }
 		]);
 	});
 	it('uses collection membership order for filtered cards and author fallback', () => {
