@@ -14,7 +14,7 @@ export function chordOffsets(bounds: ChordBounds[], gap: number): number[] {
 	});
 }
 
-export const preventChordOverlap: Action<HTMLDivElement> = (node) => {
+export const preventChordOverlap: Action<HTMLDivElement, number> = (node) => {
 	let frame: number | null = null;
 	let destroyed = false;
 
@@ -67,6 +67,9 @@ export const preventChordOverlap: Action<HTMLDivElement> = (node) => {
 	});
 
 	return {
+		update() {
+			schedule();
+		},
 		destroy() {
 			destroyed = true;
 			mutationObserver.disconnect();

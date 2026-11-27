@@ -4,6 +4,12 @@
 	import { preventChordOverlap } from '#lib/client/chord-layout.js';
 	import { chorusMode, initChorusMode } from '#lib/client/chorus-preference.js';
 	import { generalToneOffset, generalViewerSettings } from '#lib/client/viewer-defaults.js';
+	import {
+		initViewerZoom,
+		setViewerZoom,
+		viewerZoom,
+		zoomLevels
+	} from '#lib/client/viewer-zoom.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import {
@@ -45,7 +51,7 @@
 	});
 	let library = $state.raw<typeof import('chordsheetjs') | null>(null);
 	let loadError = $state<string | null>(null);
-	let openMenu = $state<'transpose' | 'notation' | 'chorus' | null>(null);
+	let openMenu = $state<'transpose' | 'notation' | 'chorus' | 'zoom' | null>(null);
 	const notationLabels = {
 		symbol: 'letters',
 		solfege: 'solfege',
@@ -56,6 +62,7 @@
 
 	onMount(() => {
 		initChorusMode();
+		initViewerZoom();
 		chorusDisplay = song.pinnedChorusMode ?? get(chorusMode);
 		void import('chordsheetjs')
 			.then((chordSheet) => {
@@ -228,184 +235,224 @@
 {/snippet}
 
 <div class="song-viewer">
-	{#if (hasChords && originalKey && currentKey) || hasChorusReferences}
-		<div class="viewer-controls">
-			<div class="toolbar">
-				{#if hasChords && originalKey && currentKey}
-					<div class="viewer-menu-control viewer-transpose-control">
-						<button
-							type="button"
-							class="viewer-control-button viewer-tone-button"
-							class:pinned={song.pinnedTone !== null}
-							aria-label={`${t($locale, 'transpose')}: ${toneLabel(currentKey, notation)}`}
-							title={t($locale, 'transpose')}
-							aria-expanded={openMenu === 'transpose'}
-							onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
-						>
-							<Icon name="tuning-fork" size={22} /><span class="viewer-key-badge">
-								{toneLabel(currentKey, notation)}
-							</span>
-						</button>
-						{#if openMenu === 'transpose'}
-							<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
-								<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
-									{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
-								</button>
-								<div class="viewer-tone-track">
-									<input
-										type="range"
-										min="-5"
-										max="6"
-										step="1"
-										bind:value={semitones}
-										aria-label={t($locale, 'transpose')}
-									/>
-									<div class="viewer-tone-scale">
-										{#each tones as tone (tone.offset)}
-											<div class="viewer-tone-option">
-												<button
-													type="button"
-													class="viewer-tone-value"
-													class:original={tone.offset === 0}
-													class:active={tone.offset === semitones}
-													title={tone.label}
-													aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
-													onclick={() => (semitones = tone.offset)}
-												>
-													{tone.label}
-												</button>
-												<button
-													type="button"
-													class="viewer-tone-pin"
-													class:active={isTonePinned(tone.offset)}
-													disabled={pinBusy}
-													aria-label={`${t($locale, isTonePinned(tone.offset) ? 'unpinSetting' : 'pinSetting')}: ${tone.label}`}
-													aria-pressed={isTonePinned(tone.offset)}
-													onclick={() => toggleTonePin(tone.offset)}
-												>
-													<Icon name="pin" size={13} />
-												</button>
-											</div>
-										{/each}
-									</div>
+	<div class="viewer-controls">
+		<div class="toolbar">
+			{#if hasChords && originalKey && currentKey}
+				<div class="viewer-menu-control viewer-transpose-control">
+					<button
+						type="button"
+						class="viewer-control-button viewer-tone-button"
+						class:pinned={song.pinnedTone !== null}
+						aria-label={`${t($locale, 'transpose')}: ${toneLabel(currentKey, notation)}`}
+						title={t($locale, 'transpose')}
+						aria-expanded={openMenu === 'transpose'}
+						onclick={() => (openMenu = openMenu === 'transpose' ? null : 'transpose')}
+					>
+						<Icon name="tuning-fork" size={22} /><span class="viewer-key-badge">
+							{toneLabel(currentKey, notation)}
+						</span>
+					</button>
+					{#if openMenu === 'transpose'}
+						<div class="viewer-tone-popover" role="group" aria-label={t($locale, 'transpose')}>
+							<button class="viewer-original-reset" type="button" onclick={() => (semitones = 0)}>
+								{t($locale, 'originalTone')} · {toneLabel(originalKey, notation)}
+							</button>
+							<div class="viewer-tone-track">
+								<input
+									type="range"
+									min="-5"
+									max="6"
+									step="1"
+									bind:value={semitones}
+									aria-label={t($locale, 'transpose')}
+								/>
+								<div class="viewer-tone-scale">
+									{#each tones as tone (tone.offset)}
+										<div class="viewer-tone-option">
+											<button
+												type="button"
+												class="viewer-tone-value"
+												class:original={tone.offset === 0}
+												class:active={tone.offset === semitones}
+												title={tone.label}
+												aria-label={`${tone.label}${tone.offset === 0 ? ` (${t($locale, 'originalTone')})` : ''}`}
+												onclick={() => (semitones = tone.offset)}
+											>
+												{tone.label}
+											</button>
+											<button
+												type="button"
+												class="viewer-tone-pin"
+												class:active={isTonePinned(tone.offset)}
+												disabled={pinBusy}
+												aria-label={`${t($locale, isTonePinned(tone.offset) ? 'unpinSetting' : 'pinSetting')}: ${tone.label}`}
+												aria-pressed={isTonePinned(tone.offset)}
+												onclick={() => toggleTonePin(tone.offset)}
+											>
+												<Icon name="pin" size={13} />
+											</button>
+										</div>
+									{/each}
 								</div>
 							</div>
-						{/if}
-					</div>
-					<div class="viewer-notation-control viewer-menu-control">
-						<button
-							type="button"
-							class="viewer-control-button viewer-notation-button"
-							class:pinned={song.pinnedNotation !== null}
-							aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
-							title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
-							aria-expanded={openMenu === 'notation'}
-							onclick={() => (openMenu = openMenu === 'notation' ? null : 'notation')}
+						</div>
+					{/if}
+				</div>
+				<div class="viewer-notation-control viewer-menu-control">
+					<button
+						type="button"
+						class="viewer-control-button viewer-notation-button"
+						class:pinned={song.pinnedNotation !== null}
+						aria-label={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+						title={`${t($locale, 'notation')}: ${t($locale, notationLabels[notation])}`}
+						aria-expanded={openMenu === 'notation'}
+						onclick={() => (openMenu = openMenu === 'notation' ? null : 'notation')}
+					>
+						<Icon name="music" size={22} /><span class="viewer-key-badge">
+							{toneLabel(originalKey, notation)}
+						</span>
+					</button>
+					{#if openMenu === 'notation'}
+						<div
+							class="viewer-control-menu"
+							role="menu"
+							tabindex="-1"
+							aria-label={t($locale, 'notation')}
 						>
-							<Icon name="music" size={22} /><span class="viewer-key-badge">
-								{toneLabel(originalKey, notation)}
-							</span>
-						</button>
-						{#if openMenu === 'notation'}
-							<div
-								class="viewer-control-menu"
-								role="menu"
-								tabindex="-1"
-								aria-label={t($locale, 'notation')}
-							>
-								{#each viewerNotations as mode (mode)}
-									<div class="viewer-option-row" role="none">
-										<button
-											type="button"
-											role="menuitemradio"
-											aria-checked={notation === mode}
-											class:active={notation === mode}
-											onclick={() => chooseNotation(mode)}
-										>
-											{t($locale, notationLabels[mode])}
-										</button>
-										<button
-											type="button"
-											class="viewer-option-pin"
-											class:active={song.pinnedNotation === mode}
-											role="menuitemcheckbox"
-											aria-checked={song.pinnedNotation === mode}
-											disabled={pinBusy}
-											aria-label={`${t($locale, song.pinnedNotation === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, notationLabels[mode])}`}
-											onclick={() => toggleNotationPin(mode)}
-										>
-											<Icon name="pin" size={14} />
-										</button>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/if}
-				{#if hasChorusReferences}
-					<div class="viewer-menu-control viewer-chorus-control">
-						<button
-							type="button"
-							class="viewer-control-button"
-							class:pinned={song.pinnedChorusMode !== null}
+							{#each viewerNotations as mode (mode)}
+								<div class="viewer-option-row" role="none">
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={notation === mode}
+										class:active={notation === mode}
+										onclick={() => chooseNotation(mode)}
+									>
+										{t($locale, notationLabels[mode])}
+									</button>
+									<button
+										type="button"
+										class="viewer-option-pin"
+										class:active={song.pinnedNotation === mode}
+										role="menuitemcheckbox"
+										aria-checked={song.pinnedNotation === mode}
+										disabled={pinBusy}
+										aria-label={`${t($locale, song.pinnedNotation === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, notationLabels[mode])}`}
+										onclick={() => toggleNotationPin(mode)}
+									>
+										<Icon name="pin" size={14} />
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
+			{#if hasChorusReferences}
+				<div class="viewer-menu-control viewer-chorus-control">
+					<button
+						type="button"
+						class="viewer-control-button"
+						class:pinned={song.pinnedChorusMode !== null}
+						aria-label={t($locale, 'chorusDisplay')}
+						title={t($locale, 'chorusDisplay')}
+						aria-expanded={openMenu === 'chorus'}
+						onclick={() => (openMenu = openMenu === 'chorus' ? null : 'chorus')}
+					>
+						<Icon name="chorus" size={20} />
+					</button>
+					{#if openMenu === 'chorus'}<div
+							class="viewer-control-menu"
+							role="menu"
+							tabindex="-1"
 							aria-label={t($locale, 'chorusDisplay')}
-							title={t($locale, 'chorusDisplay')}
-							aria-expanded={openMenu === 'chorus'}
-							onclick={() => (openMenu = openMenu === 'chorus' ? null : 'chorus')}
 						>
-							<Icon name="chorus" size={20} />
+							{#each chorusModes as mode (mode)}
+								<div class="viewer-option-row" role="none">
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={chorusDisplay === mode}
+										class:active={chorusDisplay === mode}
+										onclick={() => chooseChorusMode(mode)}
+									>
+										{t(
+											$locale,
+											mode === 'label'
+												? 'chorusOptionLabel'
+												: mode === 'expanded'
+													? 'chorusExpanded'
+													: 'chorusHidden'
+										)}
+									</button>
+									<button
+										type="button"
+										class="viewer-option-pin"
+										class:active={song.pinnedChorusMode === mode}
+										role="menuitemcheckbox"
+										aria-checked={song.pinnedChorusMode === mode}
+										disabled={pinBusy}
+										aria-label={`${t($locale, song.pinnedChorusMode === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, mode === 'label' ? 'chorusOptionLabel' : mode === 'expanded' ? 'chorusExpanded' : 'chorusHidden')}`}
+										onclick={() => toggleChorusPin(mode)}
+									>
+										<Icon name="pin" size={14} />
+									</button>
+								</div>
+							{/each}
+						</div>{/if}
+				</div>
+			{/if}
+			<div class="viewer-menu-control viewer-zoom-control">
+				<button
+					type="button"
+					class="viewer-control-button"
+					aria-label={`${t($locale, 'zoom')}: ${$viewerZoom}%`}
+					title={`${t($locale, 'zoom')}: ${$viewerZoom}%`}
+					aria-expanded={openMenu === 'zoom'}
+					onclick={() => (openMenu = openMenu === 'zoom' ? null : 'zoom')}
+				>
+					<Icon name="search" size={20} />
+				</button>
+				{#if openMenu === 'zoom'}
+					<div class="viewer-zoom-popover" role="group" aria-label={t($locale, 'zoom')}>
+						<button class="viewer-original-reset" type="button" onclick={() => setViewerZoom(100)}>
+							{t($locale, 'originalZoom')} · 100%
 						</button>
-						{#if openMenu === 'chorus'}<div
-								class="viewer-control-menu"
-								role="menu"
-								tabindex="-1"
-								aria-label={t($locale, 'chorusDisplay')}
-							>
-								{#each chorusModes as mode (mode)}
-									<div class="viewer-option-row" role="none">
-										<button
-											type="button"
-											role="menuitemradio"
-											aria-checked={chorusDisplay === mode}
-											class:active={chorusDisplay === mode}
-											onclick={() => chooseChorusMode(mode)}
-										>
-											{t(
-												$locale,
-												mode === 'label'
-													? 'chorusOptionLabel'
-													: mode === 'expanded'
-														? 'chorusExpanded'
-														: 'chorusHidden'
-											)}
-										</button>
-										<button
-											type="button"
-											class="viewer-option-pin"
-											class:active={song.pinnedChorusMode === mode}
-											role="menuitemcheckbox"
-											aria-checked={song.pinnedChorusMode === mode}
-											disabled={pinBusy}
-											aria-label={`${t($locale, song.pinnedChorusMode === mode ? 'unpinSetting' : 'pinSetting')}: ${t($locale, mode === 'label' ? 'chorusOptionLabel' : mode === 'expanded' ? 'chorusExpanded' : 'chorusHidden')}`}
-											onclick={() => toggleChorusPin(mode)}
-										>
-											<Icon name="pin" size={14} />
-										</button>
-									</div>
-								{/each}
-							</div>{/if}
+						<input
+							type="range"
+							min="0"
+							max={zoomLevels.length - 1}
+							step="1"
+							value={zoomLevels.indexOf($viewerZoom)}
+							aria-label={t($locale, 'zoom')}
+							aria-valuetext={`${$viewerZoom}%`}
+							oninput={(event) => setViewerZoom(zoomLevels[Number(event.currentTarget.value)])}
+						/>
+						<div class="viewer-zoom-scale">
+							{#each zoomLevels as level (level)}
+								<button
+									type="button"
+									class:original={level === 100}
+									class:active={$viewerZoom === level}
+									aria-pressed={$viewerZoom === level}
+									onclick={() => setViewerZoom(level)}
+								>
+									{level}%
+								</button>
+							{/each}
+						</div>
 					</div>
 				{/if}
 			</div>
 		</div>
-	{/if}
-	<div class="viewer" aria-label={t($locale, 'preview')} use:preventChordOverlap>
+	</div>
+	<div class="viewer" aria-label={t($locale, 'preview')} use:preventChordOverlap={$viewerZoom}>
 		{#if loadError}<p class="error" role="alert">{t($locale, 'previewError')}: {loadError}</p>
 		{:else if preview?.error}<p class="error" role="alert">
 				{t($locale, 'previewError')}: {preview.error}
 			</p>
 		{:else if preview}
-			<div class="chord-sheet">
+			<div class="chord-sheet" style={`--viewer-zoom: ${$viewerZoom / 100}`}>
 				{#if preview.title}<h1 class="title">{preview.title}</h1>{/if}
 				{#each preview.blocks as block, blockIndex (blockIndex)}
 					{#if block.kind === 'section'}

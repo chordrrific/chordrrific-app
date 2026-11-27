@@ -291,9 +291,9 @@ button.danger {
 	--bis-corner-radius: 0.45rem;
 	--bis-column-gap: 0.35rem;
 	--bis-marker-color: #29433a;
-	--bis-marker-size: 0.95rem;
+	--bis-marker-size: 0.95em;
 	--bis-label-color: #6a7b72;
-	--bis-label-size: 0.78rem;
+	--bis-label-size: 0.78em;
 	overflow: auto;
 	min-height: 14rem;
 	padding: 1rem;
@@ -304,6 +304,15 @@ button.danger {
 .viewer .chord {
 	color: #14634e;
 	font-weight: 700;
+}
+.viewer .chord-sheet {
+	width: max-content;
+	margin-inline: auto;
+	font-size: calc(1rem * var(--viewer-zoom, 1));
+	text-align: left;
+}
+.viewer .chord-sheet .title {
+	font-size: 1.8em;
 }
 .viewer .paragraph {
 	margin: 0 0 1rem;
@@ -387,7 +396,7 @@ button.danger {
 	padding: 0.1rem 0.35rem 0.1rem 0.1rem;
 	border-radius: 0.15rem;
 	background: #e8ece9;
-	font-size: 0.95rem;
+	font-size: 0.95em;
 }
 .viewer .chorus-reference.expanded {
 	margin-bottom: 0.3rem;
@@ -1190,6 +1199,9 @@ body:has(.library-shell) > div > main {
 	flex: none;
 	min-width: 0;
 }
+.viewer-zoom-control {
+	margin-left: auto;
+}
 .viewer-menu-control {
 	position: relative;
 }
@@ -1244,6 +1256,45 @@ body:has(.library-shell) > div > main {
 	border-radius: 0.65rem;
 	background: var(--surface);
 	box-shadow: 0 12px 35px #0003;
+}
+.viewer-zoom-popover {
+	position: absolute;
+	top: calc(100% + 0.4rem);
+	right: 0;
+	z-index: 4;
+	width: min(23rem, calc(100vw - 2rem));
+	padding: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: 0.65rem;
+	background: var(--surface);
+	box-shadow: 0 12px 35px #0003;
+}
+.viewer-zoom-popover input[type='range'] {
+	width: 100%;
+	margin: 0 0 0.2rem;
+	accent-color: var(--accent);
+}
+.viewer-zoom-scale {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 0.1rem;
+}
+.viewer-zoom-scale button {
+	min-width: 0;
+	padding: 0.3rem 0;
+	border: 1px solid transparent;
+	border-radius: 0.3rem;
+	background: transparent;
+	color: var(--ink);
+	font-size: 0.7rem;
+}
+.viewer-zoom-scale button.original {
+	border-color: var(--border);
+	font-weight: 800;
+}
+.viewer-zoom-scale button.active {
+	background: var(--soft);
+	color: var(--accent);
 }
 .viewer-original-reset {
 	width: 100%;
