@@ -65,13 +65,27 @@ npm test
 npm run build
 ```
 
-`npm test` runs domain unit tests and SQLite integration tests in a temporary database. GitHub Actions runs the same checks on feature branches and pull requests.
+`npm test` runs domain unit tests and SQLite integration tests in a temporary database. GitHub Actions runs these checks, plus a production dependency audit, on feature branches and pull requests.
+
+After validation, pushes to `develop`, `main` and version tags build native AMD64 and ARM64 images and publish a combined image to Docker Hub at `chordrrific/chordrrific`. `develop` publishes `edge` and `develop`; `main` publishes `latest`. A tag such as `v0.1.0` publishes `v0.1.0` and `0.1.0` only when it matches `package.json` and points to a commit on `main`. Every published build also gets a `sha-...` tag. Pull requests and feature branches never publish images. The workflow uses the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
 
 To check a running app over HTTP, set `SMOKE_BASE_URL`, `SMOKE_EMAIL` and `SMOKE_PASSWORD`, then run `node scripts/smoke-api.mjs`. Use an administrator account; the script creates and removes temporary records.
 
 ## Container deployment
 
 A `Dockerfile` is provided for deployment and can be built with Podman. Local development uses `npm run dev` directly. Persist `/app/data` as a volume; run `npm run db:deploy` and, on first setup only, `npm run db:seed` in the container before serving traffic. Supply `ADMIN_EMAIL` and `ADMIN_PASSWORD` only to the seed process. Set `ORIGIN` to the public URL when starting the app container. The container listens on port 3000.
+
+The example [`compose.yaml`](compose.yaml) uses the Docker Hub `edge` image by default, exposes port 3000 and keeps SQLite in a named volume. Set `CHORDRRIFIC_ORIGIN` to the public URL when deploying behind a proxy; `CHORDRRIFIC_PORT` changes the host port, and `CHORDRRIFIC_TAG` selects an image tag such as `latest` or a version. On first deployment:
+
+```sh
+docker compose pull
+docker compose run --rm chordrrific npm run db:deploy
+# Export ADMIN_EMAIL and ADMIN_PASSWORD in the shell before the one-off seed.
+docker compose run --rm -e ADMIN_EMAIL -e ADMIN_PASSWORD chordrrific npm run db:seed
+docker compose up -d
+```
+
+For later updates, pull the selected tag, apply migrations, then restart with `docker compose up -d`. The administrator seed is only needed when setting up the first account.
 
 For a local Podman check, after setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your shell:
 
