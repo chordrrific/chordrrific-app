@@ -12,6 +12,7 @@
 	} from '#lib/client/viewer-zoom.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
+	import { songSearchEvidence } from '#lib/client/library.js';
 	import {
 		chorusModes,
 		viewerNotations,
@@ -44,6 +45,7 @@
 		query?: string;
 	}>();
 	let content = $derived(song.content);
+	let searchEvidence = $derived(songSearchEvidence(song, query));
 	const viewerId = $props.id();
 	let notation = $state<Notation>(generalViewerSettings.notation);
 	let notationInitialized = $state(false);
@@ -467,6 +469,9 @@
 				{#if preview.title}<h1 class="title">
 						<HighlightedText text={preview.title} {query} />
 					</h1>{/if}
+				{#if searchEvidence && searchEvidence.kind !== 'title'}<p class="song-search-evidence">
+						{t($locale, 'searchMatch')}: <HighlightedText text={searchEvidence.text} {query} />
+					</p>{/if}
 				{#each preview.blocks as block, blockIndex (blockIndex)}
 					{#if block.kind === 'section'}
 						{#if block.recalled && block.targetSourceIndex !== undefined}

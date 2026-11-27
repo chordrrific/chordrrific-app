@@ -10,6 +10,12 @@ interface Range {
 	end: number;
 }
 
+const wordPattern = /[\p{L}\p{M}\p{N}]+/gu;
+
+export function searchWords(value: string): string[] {
+	return [...value.matchAll(wordPattern)].map(([word]) => word);
+}
+
 function fold(value: string): string {
 	return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase();
 }
@@ -51,28 +57,19 @@ function exactRanges(value: string, token: string): Range[] {
 }
 
 function fuzzyRanges(value: string, token: string): Range[] {
-	const foldedToken = fold(token);
-	if (foldedToken.length < 4) return [];
-	const minimumLength = Math.max(3, foldedToken.length - 2);
-	if (fold(value).length < minimumLength) return [];
-	const fuse = new Fuse([{ text: value }], {
+	const words = [...value.matchAll(wordPattern)].map((match) => ({
+		text: match[0],
+		start: match.index,
+		end: match.index + match[0].length
+	}));
+	if (!words.length) return [];
+	const fuse = new Fuse(words, {
 		keys: ['text'],
-		includeMatches: true,
-		findAllMatches: true,
 		ignoreDiacritics: true,
 		ignoreLocation: true,
-		threshold: 0.35,
-		minMatchCharLength: minimumLength
+		threshold: 0.2
 	});
-	return (
-		fuse
-			.search(token)[0]
-			?.matches?.flatMap((match) =>
-				match.indices
-					.filter(([start, end]) => end - start + 1 >= minimumLength)
-					.map(([start, end]) => ({ start, end: end + 1 }))
-			) ?? []
-	);
+	return fuse.search(token).map(({ item }) => ({ start: item.start, end: item.end }));
 }
 
 function mergeRanges(ranges: Range[]): Range[] {
@@ -88,7 +85,7 @@ function mergeRanges(ranges: Range[]): Range[] {
 function matchRanges(value: string, query: string): Range[] {
 	if (!value || !query.trim()) return [];
 	const ranges: Range[] = [];
-	for (const token of query.trim().split(/\s+/u)) {
+	for (const token of searchWords(query)) {
 		const exact = exactRanges(value, token);
 		ranges.push(...(exact.length ? exact : fuzzyRanges(value, token)));
 	}

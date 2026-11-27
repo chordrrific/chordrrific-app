@@ -8,6 +8,7 @@ import {
 	libraryFacets,
 	retainAvailableFacets,
 	selectFacet,
+	songSearchEvidence,
 	soleCollectionFilter,
 	soleDisplayFilter,
 	visibleLibrarySongs
@@ -245,5 +246,29 @@ describe('library facets', () => {
 				index
 			).map(({ id }) => id)
 		).toEqual(['b', 'a']);
+	});
+	it('does not accept a fuzzy hit spread across separate words and explains hidden hits', () => {
+		const unrelated = {
+			...songs[0],
+			title: 'Otra canción',
+			content: '{title: Otra canción}\nna vi'
+		};
+		const tagged = {
+			...songs[1],
+			title: 'Veinticinco de diciembre',
+			content: '{title: Veinticinco de diciembre}\n{tag: navidad}\nNació en Belén'
+		};
+		expect(visibleLibrarySongs([unrelated, tagged], [], 'navi', []).map((song) => song.id)).toEqual(
+			[tagged.id]
+		);
+		expect(songSearchEvidence(tagged, 'navi')).toEqual({
+			text: 'navidad',
+			kind: 'metadata'
+		});
+		const longLine = {
+			...unrelated,
+			content: `{title: Otra canción}\n${'palabra '.repeat(30)}Navidad al final`
+		};
+		expect(songSearchEvidence(longLine, 'navi')?.text).toMatch(/^….*Navidad/);
 	});
 });

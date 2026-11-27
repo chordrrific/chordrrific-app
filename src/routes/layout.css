@@ -311,6 +311,15 @@ button.danger {
 	color: #302509;
 	box-decoration-break: clone;
 }
+.song-search-evidence {
+	max-width: 100%;
+	margin: 0;
+	overflow: hidden;
+	color: var(--muted);
+	font-size: 0.82rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 :root[data-theme='dark'] .search-highlight {
 	background: #f4c95b;
 	color: #241c08;

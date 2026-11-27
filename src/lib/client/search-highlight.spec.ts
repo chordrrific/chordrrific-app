@@ -14,6 +14,10 @@ describe('search highlighting', () => {
 		expect(highlightText('Navidad', 'navidd')).toEqual([{ text: 'Navidad', matched: true }]);
 	});
 
+	it('does not mark a loosely similar short word', () => {
+		expect(highlightText('Ha nacido', 'navi')).toEqual([{ text: 'Ha nacido', matched: false }]);
+	});
+
 	it('keeps a highlighted word contiguous across chord positions', () => {
 		expect(highlightSegmentedText(['Al', 'egria'], 'alegria')).toEqual([
 			[{ text: 'Al', matched: true }],

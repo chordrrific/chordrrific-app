@@ -6,24 +6,29 @@ import {
 	type SongMetadata
 } from '#lib/core/song-metadata.js';
 import { songSearchText } from '#lib/core/song-search-text.js';
+import { highlightText, searchWords } from './search-highlight.js';
 import type { Collection, Song } from './types.js';
 
 interface SongSearchDocument {
 	song: Song;
-	title: string;
+	title: string[];
 	metadata: string[];
 	collections: string[];
-	lyrics: string;
+	lyrics: string[];
 }
 
 export function createSongSearch(songs: readonly Song[]): Fuse<SongSearchDocument> {
 	return new Fuse(
-		songs.map((song) => ({
-			song,
-			title: song.title,
-			...songSearchText(song.content),
-			collections: song.collections.map((link) => link.collection.name)
-		})),
+		songs.map((song) => {
+			const content = songSearchText(song.content);
+			return {
+				song,
+				title: searchWords(song.title),
+				metadata: content.metadata.flatMap(searchWords),
+				collections: song.collections.flatMap((link) => searchWords(link.collection.name)),
+				lyrics: searchWords(content.lyrics)
+			};
+		}),
 		{
 			keys: [
 				{ name: 'title', weight: 4 },
@@ -31,14 +36,47 @@ export function createSongSearch(songs: readonly Song[]): Fuse<SongSearchDocumen
 				{ name: 'collections', weight: 2 },
 				{ name: 'lyrics', weight: 1 }
 			],
-			useTokenSearch: true,
-			tokenMatch: 'all',
 			ignoreDiacritics: true,
 			ignoreLocation: true,
-			threshold: 0.35,
+			threshold: 0.2,
 			shouldSort: false
 		}
 	);
+}
+
+export interface SongSearchEvidence {
+	text: string;
+	kind: 'title' | 'metadata' | 'collection' | 'lyrics';
+}
+
+export function songSearchEvidence(song: Song, query: string): SongSearchEvidence | null {
+	if (!query.trim()) return null;
+	const content = songSearchText(song.content);
+	const candidates: SongSearchEvidence[] = [
+		{ text: song.title, kind: 'title' },
+		...song.collections.map((link) => ({
+			text: link.collection.name,
+			kind: 'collection' as const
+		})),
+		...content.metadata.map((text) => ({ text, kind: 'metadata' as const })),
+		...content.lyrics.split('\n').map((text) => ({ text: text.trim(), kind: 'lyrics' as const }))
+	];
+	for (const candidate of candidates) {
+		const parts = highlightText(candidate.text, query);
+		const matchIndex = parts.findIndex((part) => part.matched);
+		if (matchIndex < 0) continue;
+		if (candidate.kind === 'title') return candidate;
+		const matchStart = parts
+			.slice(0, matchIndex)
+			.reduce((length, part) => length + part.text.length, 0);
+		const start = Math.max(0, matchStart - 12);
+		const end = Math.min(candidate.text.length, matchStart + parts[matchIndex].text.length + 56);
+		return {
+			kind: candidate.kind,
+			text: `${start ? '…' : ''}${candidate.text.slice(start, end)}${end < candidate.text.length ? '…' : ''}`
+		};
+	}
+	return null;
 }
 
 export type FacetKey = MetadataKey | 'collection';
@@ -185,8 +223,12 @@ export function visibleLibrarySongs(
 	searchIndex = createSongSearch(songs)
 ): Song[] {
 	const term = search.trim();
+	const words = searchWords(term);
 	const matchingIds = term
-		? new Set(searchIndex.search(term).map(({ item }) => item.song.id))
+		? (words.reduce<Set<string> | null>((ids, word) => {
+				const matches = new Set(searchIndex.search(word).map(({ item }) => item.song.id));
+				return ids === null ? matches : new Set([...ids].filter((id) => matches.has(id)));
+			}, null) ?? new Set<string>())
 		: null;
 	const result = songs.filter(
 		(song) =>

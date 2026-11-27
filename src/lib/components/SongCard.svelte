@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { songMetadata } from '#lib/core/song-metadata.js';
-	import { displayAuthorFacet, type FacetKey } from '#lib/client/library.js';
+	import { displayAuthorFacet, songSearchEvidence, type FacetKey } from '#lib/client/library.js';
+	import { highlightText } from '#lib/client/search-highlight.js';
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import Icon from './Icon.svelte';
@@ -44,6 +45,12 @@
 	}>();
 	let metadata = $derived(songMetadata(song.content));
 	let author = $derived(displayAuthorFacet(metadata));
+	let searchEvidence = $derived(songSearchEvidence(song, query));
+	let hasVisibleMatch = $derived(
+		[song.title, author?.value ?? '', metadata.album[0] ?? '', metadata.year[0] ?? ''].some(
+			(value) => highlightText(value, query).some((part) => part.matched)
+		)
+	);
 
 	function openFromCard(event: MouseEvent) {
 		if (
@@ -131,6 +138,9 @@
 					>
 						<HighlightedText text={metadata.year[0]} {query} />
 					</button>{/if}
+			</div>{/if}
+		{#if searchEvidence && !hasVisibleMatch}<div class="song-search-evidence">
+				{t($locale, 'searchMatch')}: <HighlightedText text={searchEvidence.text} {query} />
 			</div>{/if}
 	</div>
 	{#if song.collections.length}<div class="song-card-collections">
