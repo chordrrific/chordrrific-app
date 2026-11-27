@@ -119,6 +119,8 @@ export function toneLabel(
 			return `1${key.minor ? 'm' : ''}·${symbol}`;
 		case 'roman':
 			return `${key.minor ? 'i' : 'I'}·${symbol}`;
+		case 'hidden':
+			return `${solfege}${key.minor ? 'm' : ''}`;
 	}
 }
 
@@ -201,6 +203,7 @@ export function displayViewerChord(
 	key: SongKey | null,
 	config: ViewerMusicConfig = defaultViewerMusicConfig
 ): string {
+	if (notation === 'hidden') return '';
 	const chord = library.Chord.parse(value);
 	if (!chord) return value;
 	const reference = key ? symbolKeyName(key, config) : 'C';

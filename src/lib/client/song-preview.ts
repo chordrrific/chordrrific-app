@@ -95,15 +95,23 @@ function displayParts(
 ): PreviewPart[] {
 	return parts.map((part) =>
 		part.kind === 'line'
-			? {
-					...part,
-					segments: part.segments.map((segment) => ({
-						...segment,
-						chord: segment.chord
-							? displayViewerChord(library, segment.chord, notation, key, musicDisplay)
-							: ''
-					}))
-				}
+			? notation === 'hidden'
+				? {
+						...part,
+						hasChords: false,
+						segments: [
+							{ chord: '', lyrics: part.segments.map((segment) => segment.lyrics).join('') }
+						]
+					}
+				: {
+						...part,
+						segments: part.segments.map((segment) => ({
+							...segment,
+							chord: segment.chord
+								? displayViewerChord(library, segment.chord, notation, key, musicDisplay)
+								: ''
+						}))
+					}
 			: { ...part, parts: displayParts(library, part.parts, notation, key, musicDisplay) }
 	);
 }
@@ -321,7 +329,8 @@ export function renderSongPreview(
 		);
 		originalKey = originalSongKey(library, song);
 		currentKey = originalKey ? transposeSongKey(originalKey, semitones) : null;
-		song = song.transpose(semitones, { accidental: musicDisplay.accidental });
+		if (notation !== 'hidden')
+			song = song.transpose(semitones, { accidental: musicDisplay.accidental });
 		const source = collectBlocks(library, song, bisDisplay).map((block): SourceBlock =>
 			block.kind === 'section'
 				? {

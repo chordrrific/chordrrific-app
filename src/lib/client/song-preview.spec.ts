@@ -72,6 +72,28 @@ describe('song preview', () => {
 		expect(lyrics(sections(preview)[0])).toBe('Alegria, alegria, alegria,');
 	});
 
+	it('hides chords and their vertical spacing while keeping lyrics contiguous', () => {
+		const preview = renderSongPreview(library, 'Al[D]egria, alegr[A]ia', 'hidden', 0);
+		const line = lines(sections(preview)[0])[0];
+		expect(preview.error).toBeNull();
+		expect(preview.hasChords).toBe(true);
+		expect(line.hasChords).toBe(false);
+		expect(line.segments).toEqual([{ chord: '', lyrics: 'Alegria, alegria' }]);
+	});
+
+	it('also hides chords inside repeated choruses and bis groups', () => {
+		const content =
+			'{start_of_chorus}\n{x_start_of_bis}\nAl[D]egria\n{x_end_of_bis}\n{end_of_chorus}\n{chorus}';
+		const preview = renderSongPreview(library, content, 'hidden', 0, 'expanded');
+		expect(preview.error).toBeNull();
+		for (const section of sections(preview)) {
+			expect(lines(section)[0]).toMatchObject({
+				hasChords: false,
+				segments: [{ chord: '', lyrics: 'Alegria' }]
+			});
+		}
+	});
+
 	it('reports incomplete input and recovers when it is complete', () => {
 		const invalid = renderSongPreview(library, '{', 'symbol', 0);
 		expect(invalid.error).toContain('end of input');

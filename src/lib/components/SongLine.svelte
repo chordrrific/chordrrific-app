@@ -7,7 +7,7 @@
 <div class="row" class:has-chords={line.hasChords} class:comment={line.comment}>
 	{#each line.segments as segment, segmentIndex (segmentIndex)}
 		<div class="column">
-			<div class="chord">{segment.chord}</div>
+			{#if segment.chord}<div class="chord">{segment.chord}</div>{/if}
 			<div class="lyrics">{segment.lyrics}</div>
 		</div>
 	{/each}

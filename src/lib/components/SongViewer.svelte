@@ -57,7 +57,8 @@
 		solfege: 'solfege',
 		'special-solfege': 'specialSolfege',
 		number: 'nashville',
-		roman: 'roman'
+		roman: 'roman',
+		hidden: 'hiddenNotation'
 	} as const;
 
 	onMount(() => {

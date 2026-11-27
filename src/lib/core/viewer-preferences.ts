@@ -1,6 +1,13 @@
 import { ValidationError } from './validation.js';
 
-export const viewerNotations = ['symbol', 'solfege', 'special-solfege', 'number', 'roman'] as const;
+export const viewerNotations = [
+	'symbol',
+	'solfege',
+	'special-solfege',
+	'number',
+	'roman',
+	'hidden'
+] as const;
 export type Notation = (typeof viewerNotations)[number];
 export const chorusModes = ['label', 'expanded', 'hidden'] as const;
 export type ChorusMode = (typeof chorusModes)[number];
