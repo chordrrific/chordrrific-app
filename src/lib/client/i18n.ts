@@ -146,7 +146,8 @@ const strings = {
 		addCollectionHint: 'Escribe una colección y pulsa coma o Intro',
 		addToSelection: 'Seleccionar canción',
 		removeFromSelection: 'Quitar selección',
-		confirmBulkDelete: '¿Eliminar todas las canciones seleccionadas?',
+		confirmBulkDelete:
+			'¡Se eliminarán todas las canciones seleccionadas y no podrá deshacerse el cambio! ¿Está seguro?',
 		noResults: 'Ninguna canción coincide con los filtros.',
 		filterInclude: 'Incluido',
 		filterExclude: 'Excluido',
@@ -293,7 +294,8 @@ const strings = {
 		addCollectionHint: 'Type a collection, then comma or Enter',
 		addToSelection: 'Select song',
 		removeFromSelection: 'Deselect song',
-		confirmBulkDelete: 'Delete all selected songs?',
+		confirmBulkDelete:
+			'All selected songs will be deleted and this cannot be undone! Are you sure?',
 		noResults: 'No songs match these filters.',
 		filterInclude: 'Included',
 		filterExclude: 'Excluded',
