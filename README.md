@@ -73,31 +73,31 @@ To check a running app over HTTP, set `SMOKE_BASE_URL`, `SMOKE_EMAIL` and `SMOKE
 
 ## Container deployment
 
-A `Dockerfile` is provided for deployment and can be built with Podman. Local development uses `npm run dev` directly. Persist `/app/data` as a volume; run `npm run db:deploy` and, on first setup only, `npm run db:seed` in the container before serving traffic. Supply `ADMIN_EMAIL` and `ADMIN_PASSWORD` only to the seed process. Set `ORIGIN` to the public URL when starting the app container. The container listens on port 3000.
+A `Dockerfile` is provided for deployment and can be built with Podman. Local development uses `npm run dev` directly. The container starts as root only to give the configured `PUID` and `PGID` ownership of `/app/data`; migrations, administrator creation and the application run as that user. The SQLite volume must be mounted at `/app/data`. The container listens on port 3000.
 
-The example [`compose.yaml`](compose.yaml) uses the Docker Hub `edge` image by default, exposes port 3000 and keeps SQLite in a named volume. Set `CHORDRRIFIC_ORIGIN` to the public URL when deploying behind a proxy; `CHORDRRIFIC_PORT` changes the host port, and `CHORDRRIFIC_TAG` selects an image tag such as `latest` or a version. On first deployment:
+The example [`compose.yaml`](compose.yaml) uses the Docker Hub `edge` image by default, exposes port 3000 and keeps SQLite in a named volume. `PUID` and `PGID` default to `1000`; set them to the IDs that should own the database. Set `CHORDRRIFIC_ORIGIN` to the public URL when deploying behind a proxy; `CHORDRRIFIC_PORT` changes the host port, and `CHORDRRIFIC_TAG` selects an image tag such as `latest` or a version. On first deployment:
 
 ```sh
+cp .env.example .env
+# Edit .env: set ADMIN_EMAIL, a unique ADMIN_PASSWORD (12–256 characters),
+# PUID, PGID and CHORDRRIFIC_ORIGIN.
 docker compose pull
-docker compose run --rm chordrrific npm run db:deploy
-# Export ADMIN_EMAIL and ADMIN_PASSWORD in the shell before the one-off seed.
-docker compose run --rm -e ADMIN_EMAIL -e ADMIN_PASSWORD chordrrific npm run db:seed
 docker compose up -d
 ```
 
-For later updates, pull the selected tag, apply migrations, then restart with `docker compose up -d`. The administrator seed is only needed when setting up the first account.
+The entrypoint applies migrations before creating the administrator. It only creates one if no administrator exists; later starts never reset its password. If `ADMIN_PASSWORD` is missing on a fresh database, startup fails instead of creating a known default password. After the first successful start, clear `ADMIN_PASSWORD` from `.env` and recreate the container with `docker compose up -d` so the secret is no longer part of its configuration. Environment variables can be visible through container inspection; the image also supports `ADMIN_PASSWORD_FILE` for a mounted secret file. For updates, run `docker compose pull` followed by `docker compose up -d`; migrations are applied on startup.
 
 For a local Podman check, after setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your shell:
 
 ```sh
 podman build -t chordrrific:local .
 podman volume create chordrrific-data
-podman run --rm -v chordrrific-data:/app/data:Z chordrrific:local npm run db:deploy
-podman run --rm -v chordrrific-data:/app/data:Z -e ADMIN_EMAIL -e ADMIN_PASSWORD chordrrific:local npm run db:seed
-podman run --rm -p 3000:3000 -v chordrrific-data:/app/data:Z -e ORIGIN=http://localhost:3000 chordrrific:local
+podman run --rm -p 3000:3000 -v chordrrific-data:/app/data:Z \
+  -e ORIGIN=http://localhost:3000 -e PUID=1000 -e PGID=1000 \
+  -e ADMIN_EMAIL -e ADMIN_PASSWORD chordrrific:local
 ```
 
-Open `http://localhost:3000`. Use the same volume for each command so migrations, the administrator and application data share one SQLite database.
+Open `http://localhost:3000`. The named volume retains the database across container replacements.
 
 ## Architecture
 

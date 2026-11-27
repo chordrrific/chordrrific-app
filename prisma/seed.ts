@@ -11,6 +11,9 @@ try {
 	if (await db.user.findFirst({ where: { isAdmin: true } })) {
 		console.log('Administrator already exists; seed skipped.');
 	} else {
+		if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+			throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD to create the first administrator.');
+		}
 		const email = cleanEmail(process.env.ADMIN_EMAIL);
 		const password = cleanPassword(process.env.ADMIN_PASSWORD);
 		await db.user.create({

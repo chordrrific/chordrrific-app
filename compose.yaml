@@ -7,6 +7,10 @@ services:
     environment:
       ORIGIN: ${CHORDRRIFIC_ORIGIN:-http://localhost:3000}
       DATABASE_URL: file:./data/chordrrific.db
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - chordrrific_data:/app/data
 

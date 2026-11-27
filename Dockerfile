@@ -1,5 +1,5 @@
 FROM node:24-bookworm-slim AS base
-RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends openssl gosu && rm -rf /var/lib/apt/lists/*
 
 FROM base AS build
 WORKDIR /app
@@ -22,7 +22,9 @@ COPY --from=build /app/database-url.ts ./database-url.ts
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src/lib/server/generated ./src/lib/server/generated
 COPY --from=build /app/src/lib/core/validation.ts ./src/lib/core/validation.ts
-RUN mkdir -p /app/data
+COPY scripts/container-entrypoint.sh /usr/local/bin/chordrrific-entrypoint
+RUN chmod +x /usr/local/bin/chordrrific-entrypoint && mkdir -p /app/data
 VOLUME /app/data
 EXPOSE 3000
+ENTRYPOINT ["/usr/local/bin/chordrrific-entrypoint"]
 CMD ["node", "build"]

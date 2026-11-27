@@ -44,6 +44,7 @@ jobs:
           fi
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
+      - run: sh -n scripts/container-entrypoint.sh
       - run: npm run db:generate
       - run: npm run check
       - run: npm run lint

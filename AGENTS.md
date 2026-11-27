@@ -23,7 +23,7 @@ UI → client state → application services → core / infrastructure. Do not p
 
 ## Invariants
 
-1. The manual seed creates an administrator only if no `isAdmin` user exists. It reads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the environment and has no default password.
+1. The idempotent seed creates an administrator only if no `isAdmin` user exists. It reads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the environment and has no default password.
 2. Never delete or demote the last administrator.
 3. Every song, collection and tag belongs to one user. Always verify ownership in server services, including relationship updates. Deleting a user cascades to all their data and sessions.
 4. A song may be in several collections; ordering belongs to the collection membership, not the song.
@@ -39,7 +39,7 @@ UI → client state → application services → core / infrastructure. Do not p
 - Use Prettier and ESLint; Husky runs lint-staged and commitlint.
 - Commit only on `feature/*` branches with Conventional Commits. Open PRs to `develop`; release to `main` through a PR. Do not commit directly to `develop` or `main`.
 - The current feature branch was initially committed under an older identity. The user has authorized using the current identity for local commits and will revise author metadata before publication.
-- Do not run the seed automatically from `postinstall` or app startup. Apply migrations first, then run `npm run db:seed` manually.
+- Do not run the seed from `postinstall` or local app startup. Local development uses `npm run db:seed` manually. The container entrypoint applies migrations and runs the idempotent seed before starting the app, so first deployment through Compose needs no separate container commands.
 
 ## Testing and local development
 
