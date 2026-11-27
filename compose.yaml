@@ -1,0 +1,14 @@
+services:
+  chordrrific:
+    image: chordrrific/chordrrific:${CHORDRRIFIC_TAG:-edge}
+    restart: unless-stopped
+    ports:
+      - '${CHORDRRIFIC_PORT:-3000}:3000'
+    environment:
+      ORIGIN: ${CHORDRRIFIC_ORIGIN:-http://localhost:3000}
+      DATABASE_URL: file:./data/chordrrific.db
+    volumes:
+      - chordrrific_data:/app/data
+
+volumes:
+  chordrrific_data:
