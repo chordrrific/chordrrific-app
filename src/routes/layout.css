@@ -305,6 +305,16 @@ button.danger {
 	color: #14634e;
 	font-weight: 700;
 }
+.search-highlight {
+	border-radius: 0.15em;
+	background: #ffda69;
+	color: #302509;
+	box-decoration-break: clone;
+}
+:root[data-theme='dark'] .search-highlight {
+	background: #f4c95b;
+	color: #241c08;
+}
 .viewer .chord-sheet {
 	width: max-content;
 	margin-inline: auto;

@@ -880,6 +880,7 @@
 			{#if visibleSongs.length}<div class="song-grid">
 					{#each displayedSongs as song, index (song.id)}<SongCard
 							{song}
+							query={search}
 							number={index + 1}
 							selected={selectedIds.includes(song.id)}
 							reorderable={singleCollection !== null && effectiveSort === 'collection-order'}
@@ -1003,6 +1004,7 @@
 				</form>
 			{:else if modalSong}{#key `${modalSong.id}:${modalSong.content}`}<SongViewer
 						song={modalSong}
+						query={search}
 						onPinChange={updateViewerPins}
 					/>{/key}{/if}
 		</div>

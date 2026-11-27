@@ -4,8 +4,10 @@
 	import { locale, t } from '#lib/client/i18n.js';
 	import type { Song } from '#lib/client/types.js';
 	import Icon from './Icon.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 	let {
 		song,
+		query = '',
 		number,
 		selected,
 		reorderable,
@@ -23,6 +25,7 @@
 		onFilter
 	} = $props<{
 		song: Song;
+		query?: string;
 		number: number;
 		selected: boolean;
 		reorderable: boolean;
@@ -100,7 +103,7 @@
 			onclick={onOpen}
 			aria-label={`${t($locale, 'view')}: ${song.title}`}
 		>
-			{song.title}
+			<HighlightedText text={song.title} {query} />
 		</button>
 		{#if author}<button
 				type="button"
@@ -108,7 +111,7 @@
 				onclick={() => onFilter(author.key, author.value)}
 				aria-label={`${t($locale, 'addFilter')}: ${t($locale, author.key)} ${author.value}`}
 			>
-				{author.value}
+				<HighlightedText text={author.value} {query} />
 			</button>{/if}
 		{#if metadata.album[0] || metadata.year[0]}<div class="song-card-detail">
 				{#if metadata.album[0]}<button
@@ -117,7 +120,7 @@
 						onclick={() => onFilter('album', metadata.album[0])}
 						aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'album')} ${metadata.album[0]}`}
 					>
-						{metadata.album[0]}
+						<HighlightedText text={metadata.album[0]} {query} />
 					</button>{/if}
 				{#if metadata.album[0] && metadata.year[0]}<span aria-hidden="true">·</span>{/if}
 				{#if metadata.year[0]}<button
@@ -126,7 +129,7 @@
 						onclick={() => onFilter('year', metadata.year[0])}
 						aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'year')} ${metadata.year[0]}`}
 					>
-						{metadata.year[0]}
+						<HighlightedText text={metadata.year[0]} {query} />
 					</button>{/if}
 			</div>{/if}
 	</div>
@@ -137,7 +140,7 @@
 					onclick={() => onFilter('collection', link.collection.name)}
 					aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'collection')} ${link.collection.name}`}
 				>
-					{link.collection.name}
+					<HighlightedText text={link.collection.name} {query} />
 				</button>{/each}
 		</div>{/if}
 	{#if metadata.tag.length}<div class="song-card-tags">
@@ -147,7 +150,7 @@
 					onclick={() => onFilter('tag', tag)}
 					aria-label={`${t($locale, 'addFilter')}: ${t($locale, 'tag')} ${tag}`}
 				>
-					{tag}
+					<HighlightedText text={tag} {query} />
 				</button>{/each}
 		</div>{/if}
 	<div class="song-card-footer">

@@ -31,11 +31,17 @@
 		transposeSongKey
 	} from '#lib/client/viewer-music.js';
 	import SongLine from './SongLine.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 	import Icon from './Icon.svelte';
 
-	let { song, onPinChange } = $props<{
+	let {
+		song,
+		onPinChange,
+		query = ''
+	} = $props<{
 		song: Song;
 		onPinChange: (patch: SongViewerPinUpdate) => Promise<boolean>;
+		query?: string;
 	}>();
 	let content = $derived(song.content);
 	const viewerId = $props.id();
@@ -212,13 +218,15 @@
 				<path d="m7 4 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 			</svg>
 		</button>
-		<a href={`#${viewerId}-chorus-${targetSourceIndex}`}>{t($locale, 'chorusLabel')}</a>
+		<a href={`#${viewerId}-chorus-${targetSourceIndex}`}>
+			<HighlightedText text={t($locale, 'chorusLabel')} {query} />
+		</a>
 	</div>
 {/snippet}
 
 {#snippet renderPart(part: PreviewPart)}
 	{#if part.kind === 'line'}
-		<SongLine line={part} />
+		<SongLine line={part} {query} />
 	{:else}
 		<div class="bis-group">
 			<div class="bis-content">
@@ -229,7 +237,9 @@
 			<div class="bis-bracket" aria-hidden="true"></div>
 			<div class="bis-annotation">
 				<span class="bis-marker">{part.marker}</span>
-				{#if part.label !== null}<span class="bis-label">{part.label}</span>{/if}
+				{#if part.label !== null}<span class="bis-label">
+						<HighlightedText text={part.label} {query} />
+					</span>{/if}
 			</div>
 		</div>
 	{/if}
@@ -454,7 +464,9 @@
 			</p>
 		{:else if preview}
 			<div class="chord-sheet" style={`--viewer-zoom: ${$viewerZoom / 100}`}>
-				{#if preview.title}<h1 class="title">{preview.title}</h1>{/if}
+				{#if preview.title}<h1 class="title">
+						<HighlightedText text={preview.title} {query} />
+					</h1>{/if}
 				{#each preview.blocks as block, blockIndex (blockIndex)}
 					{#if block.kind === 'section'}
 						{#if block.recalled && block.targetSourceIndex !== undefined}
@@ -479,7 +491,7 @@
 							{t($locale, 'chorusMissing')}{block.label ? `: ${block.label}` : ''}
 						</div>
 					{:else if block.kind === 'comment'}
-						<div class="song-comment">{block.text}</div>
+						<div class="song-comment"><HighlightedText text={block.text} {query} /></div>
 					{/if}
 				{/each}
 			</div>
