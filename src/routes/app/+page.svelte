@@ -26,6 +26,15 @@
 	import { notify, notifyTransient } from '#lib/client/notifications.js';
 	import { confirmAction } from '#lib/client/confirmation.js';
 	import { keyboardShortcuts } from '#lib/client/keyboard-shortcuts.js';
+	import {
+		addMembershipNames,
+		applyTagMembership,
+		createMembershipDraft,
+		membershipActionForName,
+		membershipNameKey,
+		removeMembershipName,
+		type MembershipDraft
+	} from '#lib/client/membership-draft.js';
 	import { songMetadata, replaceSongTags } from '#lib/core/song-metadata.js';
 	import { hasTitleDirective, titleFromChordPro } from '#lib/core/song-title.js';
 	import type { SongViewerPins, SongViewerPinUpdate } from '#lib/core/viewer-preferences.js';
@@ -55,10 +64,8 @@
 	let pendingExit = $state<'close' | 'view' | null>(null);
 	let membershipKind = $state<'tag' | 'collection' | null>(null);
 	let membershipTargets = $state<string[]>([]);
-	let membershipNames = $state<string[]>([]);
+	let membershipDraft = $state<MembershipDraft>({ entries: [], removed: [] });
 	let membershipInput = $state('');
-	let membershipBulk = $state(false);
-	let membershipOperation = $state<'add' | 'remove'>('add');
 	let busy = $state(false);
 	let reordering = $state(false);
 	let pendingOrder = $state<{ collectionId: string; ids: string[] } | null>(null);
@@ -494,29 +501,24 @@
 			busy = false;
 		}
 	}
-	function openMembership(kind: 'tag' | 'collection', ids: string[], bulk = false) {
+	function openMembership(kind: 'tag' | 'collection', ids: string[]) {
 		membershipKind = kind;
 		membershipTargets = ids;
-		membershipBulk = bulk;
-		membershipOperation = 'add';
 		membershipInput = '';
-		const song = songs.find((item) => item.id === ids[0]);
-		membershipNames =
-			bulk || !song
-				? []
-				: kind === 'tag'
-					? songMetadata(song.content).tag
-					: song.collections.map((link) => link.collection.name);
+		membershipDraft = createMembershipDraft(
+			ids.flatMap((id) => {
+				const song = songs.find((item) => item.id === id);
+				if (!song) return [];
+				return [
+					kind === 'tag'
+						? songMetadata(song.content).tag
+						: song.collections.map((link) => link.collection.name)
+				];
+			})
+		);
 	}
 	function addMembershipName(value = membershipInput) {
-		for (const part of value.split(',')) {
-			const name = part.trim();
-			if (
-				name &&
-				!membershipNames.some((current) => current.toLocaleLowerCase() === name.toLocaleLowerCase())
-			)
-				membershipNames = [...membershipNames, name];
-		}
+		membershipDraft = addMembershipNames(membershipDraft, value);
 		membershipInput = '';
 	}
 	function membershipKeydown(event: KeyboardEvent) {
@@ -527,12 +529,7 @@
 		}
 	}
 	async function saveMembership() {
-		if (
-			!membershipKind ||
-			busy ||
-			(membershipBulk && !membershipNames.length && !membershipInput.trim())
-		)
-			return;
+		if (!membershipKind || busy) return;
 		if (membershipInput.trim()) addMembershipName();
 		busy = true;
 		try {
@@ -541,44 +538,41 @@
 					const song = songs.find((item) => item.id === id);
 					if (!song) continue;
 					const current = songMetadata(song.content).tag;
-					const names = membershipBulk
-						? membershipOperation === 'add'
-							? [...current, ...membershipNames]
-							: current.filter(
-									(name) =>
-										!membershipNames.some(
-											(chosen) => chosen.toLocaleLowerCase() === name.toLocaleLowerCase()
-										)
-								)
-						: membershipNames;
+					const names = applyTagMembership(current, membershipDraft);
+					if (
+						names.length === current.length &&
+						names.every(
+							(name, index) => membershipNameKey(name) === membershipNameKey(current[index])
+						)
+					)
+						continue;
 					const updated = replaceSongTags(song.content, names);
 					if (updated !== song.content)
 						await request(`/api/songs/${id}`, 'PATCH', { content: updated });
 				}
 			} else {
 				const nextCollections = [...collections];
-				if (membershipOperation === 'add' || !membershipBulk) {
-					for (const name of membershipNames) {
-						if (
-							!nextCollections.some(
-								(item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase()
-							)
-						) {
-							const created = await request<Pick<Collection, 'id' | 'name'>>(
-								'/api/collections',
-								'POST',
-								{ name }
-							);
-							nextCollections.push({ ...created, songs: [] });
-						}
+				for (const entry of membershipDraft.entries) {
+					if (!entry.applyToAll) continue;
+					const name = entry.name;
+					if (
+						!nextCollections.some(
+							(item) => membershipNameKey(item.name) === membershipNameKey(name)
+						)
+					) {
+						const created = await request<Pick<Collection, 'id' | 'name'>>(
+							'/api/collections',
+							'POST',
+							{ name }
+						);
+						nextCollections.push({ ...created, songs: [] });
 					}
 				}
 				for (const collection of nextCollections) {
-					const chosen = membershipNames.some(
-						(name) => name.toLocaleLowerCase() === collection.name.toLocaleLowerCase()
-					);
-					if (membershipBulk && !chosen) continue;
-					let ids = collection.songs.map((entry) => entry.songId);
+					const action = membershipActionForName(membershipDraft, collection.name);
+					if (action === null) continue;
+					const originalIds = collectionSongIds(collection);
+					let ids = originalIds;
 					for (const id of membershipTargets) {
 						const changed = changedMembershipIds(
 							{
@@ -590,13 +584,13 @@
 								}))
 							},
 							id,
-							membershipBulk ? membershipOperation === 'add' : chosen
+							action
 						);
 						if (changed) ids = changed;
 					}
 					if (
-						ids.length !== collection.songs.length ||
-						ids.some((id, index) => id !== collection.songs[index]?.songId)
+						ids.length !== originalIds.length ||
+						ids.some((id, index) => id !== originalIds[index])
 					)
 						await request(`/api/collections/${collection.id}/songs`, 'PUT', { songIds: ids });
 				}
@@ -730,14 +724,14 @@
 		{#if selectedIds.length}<div class="bulk-toolbar">
 				<strong>{selectedIds.length} {t($locale, 'selectedCount')}</strong><button
 					class="bulk-action"
-					onclick={() => openMembership('tag', selectedIds, true)}
+					onclick={() => openMembership('tag', selectedIds)}
 					aria-label={t($locale, 'tags')}
 					title={t($locale, 'tags')}
 				>
 					<Icon name="tag" size={17} /><span class="bulk-action-label">{t($locale, 'tags')}</span>
 				</button><button
 					class="bulk-action"
-					onclick={() => openMembership('collection', selectedIds, true)}
+					onclick={() => openMembership('collection', selectedIds)}
 					aria-label={t($locale, 'collections')}
 					title={t($locale, 'collections')}
 				>
@@ -919,19 +913,6 @@
 				<Icon name="close" />
 			</button>
 		</div>
-		{#if membershipBulk}<div class="membership-mode">
-				<button
-					class:active={membershipOperation === 'add'}
-					onclick={() => (membershipOperation = 'add')}
-				>
-					{t($locale, 'bulkAdd')}
-				</button><button
-					class:active={membershipOperation === 'remove'}
-					onclick={() => (membershipOperation = 'remove')}
-				>
-					{t($locale, 'bulkRemove')}
-				</button>
-			</div>{/if}
 		<label>
 			{t($locale, 'name')}<input
 				bind:value={membershipInput}
@@ -944,11 +925,14 @@
 			{#each existingNames as name (name)}<option value={name}></option>{/each}
 		</datalist>
 		<div class="membership-chips">
-			{#each membershipNames as name (name)}<span class="tag-chip">
-					{name}<button
+			{#each membershipDraft.entries as entry (entry.name)}<span
+					class="tag-chip"
+					class:partial={entry.partial}
+				>
+					{entry.name}<button
 						class="chip-remove"
-						onclick={() => (membershipNames = membershipNames.filter((item) => item !== name))}
-						aria-label={`${t($locale, 'remove')} ${name}`}
+						onclick={() => (membershipDraft = removeMembershipName(membershipDraft, entry.name))}
+						aria-label={`${t($locale, 'remove')} ${entry.name}`}
 					>
 						<Icon name="close" size={14} />
 					</button>
@@ -957,7 +941,7 @@
 		<div class="actions membership-actions">
 			<button onclick={() => (membershipKind = null)}>{t($locale, 'cancel')}</button><button
 				class="primary"
-				disabled={busy || (membershipBulk && !membershipNames.length && !membershipInput.trim())}
+				disabled={busy}
 				onclick={saveMembership}
 			>
 				{t($locale, 'save')}

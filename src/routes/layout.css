@@ -1448,21 +1448,15 @@ body:has(.library-shell) > div > main {
 .membership-header h2 {
 	margin: 0;
 }
-.membership-mode {
-	display: flex;
-	gap: 0.4rem;
-	margin-bottom: 1rem;
-}
-.membership-mode .active {
-	background: var(--accent);
-	color: var(--surface);
-}
 .membership-chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.4rem;
 	min-height: 2rem;
 	margin: 0.75rem 0;
+}
+.membership-chips .tag-chip.partial {
+	opacity: 0.55;
 }
 .chip-remove {
 	display: grid;
