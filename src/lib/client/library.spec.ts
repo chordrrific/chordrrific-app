@@ -8,7 +8,6 @@ import {
 	libraryFacets,
 	retainAvailableFacets,
 	selectFacet,
-	songSearchEvidence,
 	soleCollectionFilter,
 	soleDisplayFilter,
 	visibleLibrarySongs
@@ -247,7 +246,7 @@ describe('library facets', () => {
 			).map(({ id }) => id)
 		).toEqual(['b', 'a']);
 	});
-	it('does not accept a fuzzy hit spread across separate words and explains hidden hits', () => {
+	it('does not accept a fuzzy hit spread across separate words', () => {
 		const unrelated = {
 			...songs[0],
 			title: 'Otra canción',
@@ -261,14 +260,5 @@ describe('library facets', () => {
 		expect(visibleLibrarySongs([unrelated, tagged], [], 'navi', []).map((song) => song.id)).toEqual(
 			[tagged.id]
 		);
-		expect(songSearchEvidence(tagged, 'navi')).toEqual({
-			text: 'navidad',
-			kind: 'metadata'
-		});
-		const longLine = {
-			...unrelated,
-			content: `{title: Otra canción}\n${'palabra '.repeat(30)}Navidad al final`
-		};
-		expect(songSearchEvidence(longLine, 'navi')?.text).toMatch(/^….*Navidad/);
 	});
 });

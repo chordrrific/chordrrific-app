@@ -6,7 +6,7 @@ import {
 	type SongMetadata
 } from '#lib/core/song-metadata.js';
 import { songSearchText } from '#lib/core/song-search-text.js';
-import { highlightText, searchWords } from './search-highlight.js';
+import { searchWords } from './search-highlight.js';
 import type { Collection, Song } from './types.js';
 
 interface SongSearchDocument {
@@ -42,41 +42,6 @@ export function createSongSearch(songs: readonly Song[]): Fuse<SongSearchDocumen
 			shouldSort: false
 		}
 	);
-}
-
-export interface SongSearchEvidence {
-	text: string;
-	kind: 'title' | 'metadata' | 'collection' | 'lyrics';
-}
-
-export function songSearchEvidence(song: Song, query: string): SongSearchEvidence | null {
-	if (!query.trim()) return null;
-	const content = songSearchText(song.content);
-	const candidates: SongSearchEvidence[] = [
-		{ text: song.title, kind: 'title' },
-		...song.collections.map((link) => ({
-			text: link.collection.name,
-			kind: 'collection' as const
-		})),
-		...content.metadata.map((text) => ({ text, kind: 'metadata' as const })),
-		...content.lyrics.split('\n').map((text) => ({ text: text.trim(), kind: 'lyrics' as const }))
-	];
-	for (const candidate of candidates) {
-		const parts = highlightText(candidate.text, query);
-		const matchIndex = parts.findIndex((part) => part.matched);
-		if (matchIndex < 0) continue;
-		if (candidate.kind === 'title') return candidate;
-		const matchStart = parts
-			.slice(0, matchIndex)
-			.reduce((length, part) => length + part.text.length, 0);
-		const start = Math.max(0, matchStart - 12);
-		const end = Math.min(candidate.text.length, matchStart + parts[matchIndex].text.length + 56);
-		return {
-			kind: candidate.kind,
-			text: `${start ? '…' : ''}${candidate.text.slice(start, end)}${end < candidate.text.length ? '…' : ''}`
-		};
-	}
-	return null;
 }
 
 export type FacetKey = MetadataKey | 'collection';
