@@ -15,6 +15,11 @@ export const notifications = writable<AppNotification[]>([]);
 export const toasts = writable<AppNotification[]>([]);
 let activeUser: string | null = null;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
+let localNotificationSequence = 0;
+
+function localNotificationId(): string {
+	return `local-${Date.now()}-${++localNotificationSequence}`;
+}
 
 export async function initializeNotifications(userId: string | null): Promise<void> {
 	if (activeUser === userId) return;
@@ -56,7 +61,7 @@ function showToast(entry: AppNotification): void {
 
 export function notifyTransient(kind: NotificationKind, title: string, body = ''): void {
 	showToast({
-		id: `local-${crypto.randomUUID()}`,
+		id: localNotificationId(),
 		kind,
 		title,
 		body,
@@ -71,7 +76,7 @@ export async function notify(kind: NotificationKind, title: string, body = ''): 
 		entry = await request<AppNotification>('/api/notifications', 'POST', { kind, title, body });
 	} catch {
 		entry = {
-			id: `local-${crypto.randomUUID()}`,
+			id: localNotificationId(),
 			kind,
 			title,
 			body,
