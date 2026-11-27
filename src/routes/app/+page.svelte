@@ -341,7 +341,7 @@
 		}
 	}
 	function cardOpen(song: Song, event: MouseEvent) {
-		if (event.ctrlKey || event.metaKey) {
+		if (event.ctrlKey || event.metaKey || modifierHeld) {
 			toggleSongSelection(song.id);
 			return;
 		}
@@ -837,7 +837,7 @@
 							aria-label={t($locale, 'selectAllVisible')}
 							title={t($locale, 'selectAllVisible')}
 						>
-							<Icon name="select-all" size={18} />
+							<Icon name="select-all" size={20} />
 						</button>{/if}
 				</div>
 				<button
@@ -938,10 +938,10 @@
 				>
 					<Icon name="left" />
 				</button><strong title={creating ? t($locale, 'newSong') : modalSong?.title}>
-					{creating ? t($locale, 'newSong') : modalSong?.title}
+					{modalIndex >= 0 && !creating ? modalIndex + 1 : '—'} / {displayedSongs.length}
 				</strong><button
 					class="icon-button"
-					disabled={creating || modalIndex < 0 || modalIndex >= visibleSongs.length - 1}
+					disabled={creating || modalIndex < 0 || modalIndex >= displayedSongs.length - 1}
 					onclick={() => navigateSong(1)}
 					aria-label={t($locale, 'nextSong')}
 				>

@@ -70,13 +70,20 @@
 	{:else if name === 'upload'}<path d="M12 16V3m-4 4 4-4 4 4M4 16v5h16v-5" />
 	{:else if name === 'check'}<path d="m4 12 5 5L20 6" />
 	{:else if name === 'select-all'}<rect
-			x="3"
-			y="3"
-			width="18"
-			height="18"
-			rx="2"
-			stroke-dasharray="3 2"
-		/><path d="m7 12 3 3 7-7" />
+			x="2"
+			y="2"
+			width="14"
+			height="14"
+			rx="1.5"
+			fill="var(--soft)"
+		/><rect x="5" y="5" width="14" height="14" rx="1.5" fill="var(--soft)" /><rect
+			x="8"
+			y="8"
+			width="14"
+			height="14"
+			rx="1.5"
+			fill="var(--soft)"
+		/><path d="m11 15 2.5 2.5 5-5" />
 	{:else if name === 'sort'}<path d="M4 6h16M4 12h12M4 18h8" />
 	{:else if name === 'bell'}<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9ZM10 21h4" />
 	{:else if name === 'grip'}<circle cx="9" cy="5" r="1" fill="currentColor" stroke="none" /><circle
