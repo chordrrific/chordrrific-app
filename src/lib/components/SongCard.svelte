@@ -39,8 +39,23 @@
 	}>();
 	let metadata = $derived(songMetadata(song.content));
 	let author = $derived(displayAuthorFacet(metadata));
+
+	function openFromCard(event: MouseEvent) {
+		if (
+			event.target instanceof Element &&
+			event.target.closest('button, a, input, select, textarea, [contenteditable="true"]')
+		)
+			return;
+		onOpen(event);
+	}
+
+	function cardClick(node: HTMLElement) {
+		node.addEventListener('click', openFromCard);
+		return { destroy: () => node.removeEventListener('click', openFromCard) };
+	}
 </script>
 
+<!-- The title button remains the keyboard-accessible way to open the song. -->
 <article
 	class="song-card"
 	class:selected
@@ -48,6 +63,7 @@
 	class:dragging
 	class:drop-target={dropTarget}
 	data-song-id={reorderable ? song.id : undefined}
+	use:cardClick
 >
 	{#if reorderable}<button
 			type="button"

@@ -908,6 +908,7 @@ body:has(.library-shell) > div > main {
 	position: relative;
 	display: flex;
 	flex-direction: column;
+	cursor: pointer;
 	min-width: 0;
 	min-height: 9.8rem;
 	background: var(--surface);
