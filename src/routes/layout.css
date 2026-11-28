@@ -437,6 +437,54 @@ button.danger {
 	margin: 0 0 1rem;
 	font-style: italic;
 }
+.viewer .capo-diagram {
+	position: relative;
+	isolation: isolate;
+	display: block;
+	width: max-content;
+	margin: 0.8em 0;
+	break-inside: avoid;
+}
+.viewer .capo-diagram img {
+	position: relative;
+	z-index: 0;
+	display: block;
+	width: 4.2em;
+	height: auto;
+}
+.viewer .capo-badge-circle,
+.viewer .capo-badge-number {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	display: grid;
+	place-items: center;
+	width: 1.9em;
+	height: 1.9em;
+	transform: translate(-50%, -50%);
+}
+.viewer .capo-badge-circle {
+	z-index: 1;
+	border-radius: 50%;
+	background: rgb(38 61 53 / 15%);
+	backdrop-filter: blur(1px);
+}
+.viewer .capo-badge-number {
+	z-index: 2;
+	color: #263d35;
+	font-size: 1.05em;
+	font-weight: 700;
+}
+:root[data-theme='dark'] .viewer .capo-diagram img {
+	filter: invert(1);
+}
+:root[data-theme='dark'] .viewer .capo-badge-circle {
+	background: rgb(242 247 243 / 15%);
+}
+:root[data-theme='dark'] .viewer .capo-badge-number {
+	color: #fff;
+	text-shadow: 0 1px 2px rgb(0 0 0 / 70%);
+}
 @media (max-width: 800px) {
 	.site-header {
 		flex-wrap: wrap;

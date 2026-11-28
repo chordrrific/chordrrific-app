@@ -224,9 +224,19 @@
 	</div>
 {/snippet}
 
+{#snippet capoDiagram(fret: number)}
+	<figure class="capo-diagram">
+		<img src="/capo-frets.svg" alt={`Cejilla: ${fret}`} />
+		<span class="capo-badge-circle" aria-hidden="true"></span>
+		<figcaption class="capo-badge-number" aria-hidden="true">{fret}</figcaption>
+	</figure>
+{/snippet}
+
 {#snippet renderPart(part: PreviewPart)}
 	{#if part.kind === 'line'}
 		<SongLine line={part} {query} />
+	{:else if part.kind === 'capo'}
+		{@render capoDiagram(part.fret)}
 	{:else}
 		<div class="bis-group">
 			<div class="bis-content">
@@ -492,6 +502,8 @@
 						</div>
 					{:else if block.kind === 'comment'}
 						<div class="song-comment"><HighlightedText text={block.text} {query} /></div>
+					{:else if block.kind === 'capo'}
+						{@render capoDiagram(block.fret)}
 					{/if}
 				{/each}
 			</div>

@@ -17,7 +17,9 @@ function sections(preview: SongPreview): Section[] {
 }
 
 function partLines(parts: PreviewPart[]): PreviewLine[] {
-	return parts.flatMap((part) => (part.kind === 'line' ? [part] : partLines(part.parts)));
+	return parts.flatMap((part) =>
+		part.kind === 'line' ? [part] : part.kind === 'bis' ? partLines(part.parts) : []
+	);
 }
 
 function lines(section: Section): PreviewLine[] {
@@ -41,6 +43,37 @@ function bis(section: Section): PreviewBis[] {
 }
 
 describe('song preview', () => {
+	it('keeps every capo at its source position, including inside a verse', () => {
+		const content =
+			'{title: Test}\n{capo 2}\n[C]Antes\n' +
+			'{start_of_verse}\n[D]Uno\n{capo: 3}\n[E]Dos\n{end_of_verse}\n' +
+			'{capo 5}\n[F]Final';
+		const preview = renderSongPreview(library, content, 'symbol', 2);
+		expect(preview.error).toBeNull();
+		expect(preview.blocks.map((block) => block.kind)).toEqual([
+			'capo',
+			'section',
+			'section',
+			'capo',
+			'section'
+		]);
+		expect(preview.blocks[0]).toEqual({ kind: 'capo', fret: 2 });
+		expect(sections(preview)[1].parts.map((part) => part.kind)).toEqual(['line', 'capo', 'line']);
+		expect(sections(preview)[1].parts[1]).toEqual({ kind: 'capo', fret: 3 });
+		expect(preview.blocks[3]).toEqual({ kind: 'capo', fret: 5 });
+	});
+
+	it('preserves capo diagrams when a chorus is expanded', () => {
+		const content = '{start_of_chorus}\n[C]Antes\n{capo: 2}\n[D]Después\n{end_of_chorus}\n{chorus}';
+		const preview = renderSongPreview(library, content, 'symbol', 0, 'expanded');
+		expect(preview.error).toBeNull();
+		expect(sections(preview).map((section) => section.parts.map((part) => part.kind))).toEqual([
+			['line', 'capo', 'line'],
+			['line', 'capo', 'line']
+		]);
+		expect(sections(preview)[1].parts[1]).toEqual({ kind: 'capo', fret: 2 });
+	});
+
 	it('renders absolute solfege without a key and prefers sharps', () => {
 		const preview = renderSongPreview(library, '[C]Do [F#]Fa [Bb]Si', 'solfege', 0);
 		expect(preview.error).toBeNull();

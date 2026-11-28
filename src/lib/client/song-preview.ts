@@ -43,7 +43,12 @@ export interface PreviewBis {
 	marker: string;
 }
 
-export type PreviewPart = PreviewLine | PreviewBis;
+export interface PreviewCapo {
+	kind: 'capo';
+	fret: number;
+}
+
+export type PreviewPart = PreviewLine | PreviewBis | PreviewCapo;
 
 type SectionKind = 'plain' | 'verse' | 'chorus';
 
@@ -68,10 +73,11 @@ interface CommentBlock {
 	text: string;
 }
 
-type SourceBlock = SectionBlock | ChorusReference | CommentBlock;
+type SourceBlock = SectionBlock | ChorusReference | CommentBlock | PreviewCapo;
 export type PreviewBlock =
 	| SectionBlock
 	| CommentBlock
+	| PreviewCapo
 	| { kind: 'chorus-label'; sourceIndex: number; targetSourceIndex: number }
 	| { kind: 'missing-chorus'; label: string | null };
 
@@ -93,27 +99,28 @@ function displayParts(
 	key: SongKey | null,
 	musicDisplay: ViewerMusicConfig
 ): PreviewPart[] {
-	return parts.map((part) =>
-		part.kind === 'line'
-			? notation === 'hidden'
-				? {
-						...part,
-						hasChords: false,
-						segments: [
-							{ chord: '', lyrics: part.segments.map((segment) => segment.lyrics).join('') }
-						]
-					}
-				: {
-						...part,
-						segments: part.segments.map((segment) => ({
-							...segment,
-							chord: segment.chord
-								? displayViewerChord(library, segment.chord, notation, key, musicDisplay)
-								: ''
-						}))
-					}
-			: { ...part, parts: displayParts(library, part.parts, notation, key, musicDisplay) }
-	);
+	return parts.map((part): PreviewPart => {
+		if (part.kind === 'capo') return part;
+		if (part.kind === 'bis') {
+			return { ...part, parts: displayParts(library, part.parts, notation, key, musicDisplay) };
+		}
+		if (notation === 'hidden') {
+			return {
+				...part,
+				hasChords: false,
+				segments: [{ chord: '', lyrics: part.segments.map((segment) => segment.lyrics).join('') }]
+			};
+		}
+		return {
+			...part,
+			segments: part.segments.map((segment) => ({
+				...segment,
+				chord: segment.chord
+					? displayViewerChord(library, segment.chord, notation, key, musicDisplay)
+					: ''
+			}))
+		};
+	});
 }
 
 function collectBlocks(
@@ -134,6 +141,19 @@ function collectBlocks(
 	for (const [sourceIndex, line] of song.lines.entries()) {
 		const directive = line.items.find((item) => item instanceof library.Tag);
 		if (directive instanceof library.Tag) {
+			if (directive.name === 'capo') {
+				const value = directive.value.trim();
+				if (/^\d+$/.test(value)) {
+					const fret = Number(value);
+					if (Number.isSafeInteger(fret)) {
+						const capo: PreviewCapo = { kind: 'capo', fret };
+						if (bisStack.length > 0) bisStack.at(-1)!.parts.push(capo);
+						else if (current) current.parts.push(capo);
+						else blocks.push(capo);
+					}
+				}
+				continue;
+			}
 			if (directive.name === 'start_of_chorus' || directive.name === 'start_of_verse') {
 				flush();
 				current = {
